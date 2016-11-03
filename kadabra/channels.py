@@ -3,13 +3,20 @@ from .metrics import Metrics
 import logging
 
 class RedisChannel(object):
-    """A channel for transporting metrics using Redis as a backing store.
+    """A channel for transporting metrics using Redis as the transport medium.
 
+    :type host: string
     :param host: The host of the Redis server.
+
+    :type port: integer
     :param port: The port of the Redis server.
-    :param db: The database to use on the Redis server. The database should be
-    specific to Metronix, and should not be used for other application
-    purposes.
+
+    :type db: integer
+    :param db: The database to use on the Redis server. This should be used
+    exclusively for Kadabra to prevent collisions with keys that might be used
+    by your application.
+
+    :type logger: string
     :param logger: The name of the logger to use.
     """
     def __init__(self, host, port, db,
@@ -23,9 +30,10 @@ class RedisChannel(object):
         self.inprogress_key = inprogress_key
 
     def send(self, metrics):
-        """Send :class:`Metrics` to a redis list, which will act as queue for
+        """Send :class:`Metrics` to a Redis list, which will act as queue for
         metrics to be received and published.
 
+        :type metrics: kadabra.Metrics
         :param metrics: The :class:`Metrics` to be sent.
         """
         to_push = metrics.serialize()
@@ -38,7 +46,11 @@ class RedisChannel(object):
         received, the metrics will be moved into a temporary "in progress"
         queue until they have been acknolwedged as completed (by calling
         :meth:`complete`). This method will block until there are metrics
-        available on the queue or after a long timeout."""
+        available on the queue or after a long timeout.
+
+        :rtype: kadabra.Metrics
+        :returns: The :class:`Metrics` from the queue.
+        """
         self.logger.debug("Receiving metrics")
         rv = self.client.brpoplpush(self.queue_key, self.inprogress_key)
         if rv:
@@ -51,6 +63,7 @@ class RedisChannel(object):
         """Mark metrics as completed by removing them from the in progress
         queue.
 
+        :type metrics: kadabra.Metrics
         :param metrics: The :class:`Metrics` to mark as complete.
         """
         to_complete = metrics.serialize()
@@ -64,7 +77,11 @@ class RedisChannel(object):
                     str(to_complete))
 
     def in_progress(self):
-        """Return a list of the metrics that are in_progress."""
+        """Return a list of the metrics that are in_progress.
+
+        :rtype: list
+        :returns: A list of :class:`Metric`s that are in progress.
+        """
         in_progress = self.client.lrange(self.inprogress_key, 0, -1)
         self.logger.debug("Found %s in progress metrics" % len(in_progress))
         return [Metrics.deserialize(m) for m in in_progress]
