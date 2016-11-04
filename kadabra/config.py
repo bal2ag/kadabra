@@ -1,0 +1,14 @@
+DEFAULT_CONFIG = {
+    "CLIENT_DEFAULT_DIMENSIONS": {},
+    "CLIENT_TIMESTAMP_FORMAT": "%Y-%m-%dT%H:%M:%S.%fZ",
+    "CLIENT_CHANNEL_TYPE" : "redis",
+    "CLIENT_CHANNEL_ARGS" : None,
+    "AGENT_LOGGER_NAME": "kadabra.agent",
+    "AGENT_CHANNEL_TYPE" : "redis",
+    "AGENT_CHANNEL_ARGS" : None,
+    "AGENT_PUBLISHER_TYPE" : "default",
+    "AGENT_PUBLISHER_ARGS" : None,
+    "AGENT_RECEIVER_THREADS" : 3,
+    "AGENT_NANNY_FREQUENCY" : 30.0,
+    "AGENT_NANNY_THRESHOLD" : 60.0
+}

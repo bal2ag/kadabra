@@ -19,6 +19,19 @@ class RedisChannel(object):
     :type logger: string
     :param logger: The name of the logger to use.
     """
+
+    #: Default arguments for the Redis channel. These will be used by the
+    #: client and agent to initialize this channel if custom configuration
+    #: values are not provided.
+    DEFAULT_ARGS = {
+            "host": "localhost",
+            "port": 6379,
+            "db": 0,
+            "logger": "kadabra.channel",
+            "queue_key": "kadabra_queue",
+            "inprogress_key": "kadabra_inprogress"
+    }
+
     def __init__(self, host, port, db,
             logger='kadabra.channel',
             queue_key='kadabra_queue',
