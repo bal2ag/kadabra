@@ -45,6 +45,7 @@ class Client(object):
         if custom_channel_args:
             for k,v in custom_channel_args.iteritems():
                 channel_args[k] = v
+
         self.channel = channel_type(**channel_args)
 
         self.timestamp_format = config["CLIENT_TIMESTAMP_FORMAT"]
@@ -57,9 +58,7 @@ class Client(object):
         :rtype: kadabra.Collector
         :returns: A :class:`Collector` instance.
         """
-        default_dimensions =\
-            self.default_dimensions if self.default_dimensions else None
-        return Collector(default_dimensions)
+        return Collector(self.timestamp_format, **self.default_dimensions)
 
     def send(self, metrics):
         """Send a :class:`Metrics` instance to this client's configured channel
@@ -87,14 +86,20 @@ class Collector(object):
     threads that attempt to set timers or add to counts after this object is
     closed will throw an exception.
 
+    :type timestamp_format: string
+    :param timestamp_format: The format for timestamps when serializing into a
+    :class:`Metrics` instance.
+
     :type dimensions: dict
     :param dimensions: Any dimensions that this object should be initialized
     with.
     """
-    def __init__(self, dimensions=None):
+    def __init__(self, timestamp_format, **dimensions):
         self.counters = {}
         self.timers = {}
         self.dimensions = dimensions if dimensions else {}
+        self.timestamp_format = timestamp_format
+
         self.closed = False
         self.lock = threading.Lock()
 
@@ -121,7 +126,7 @@ class Collector(object):
             self.lock.release()
 
     def add_count(self, name, value, timestamp=None, metadata=None,
-            replace_timestamp=False)
+            replace_timestamp=False):
         """Add a new counter to this Collector object, or add the value to an
         existing counter if it already exists.
 
@@ -207,10 +212,6 @@ class Collector(object):
         :raises CollectorClosedError: If this Collector object has
         already been closed.
         """
-        if not isinstance(value, datetime.timedelta):
-            raise Exception("Timer value must be an instance of "\
-                    "datetime.timedelta")
-
         self.lock.acquire()
         try:
             if self.closed:
@@ -264,10 +265,10 @@ class Collector(object):
         finally:
             self.lock.release()
 
-def CollectorClosedError(Exception):
+class CollectorClosedError(BaseException):
     """Raised if you try to add metrics to or close a :class:`Collector` object
     that has already been closed."""
     def __init__(self):
-        super(self, CollectorClosedError).__init__(\
-                message="Collector object has been closed")
+        super(CollectorClosedError, self).__init__(\
+                "Collector object has been closed")
 

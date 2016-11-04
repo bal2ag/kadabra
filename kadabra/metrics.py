@@ -215,7 +215,8 @@ class Unit(object):
 
 class Units(object):
     """Container for commonly used units."""
-    MILLISECOND = Unit("millisecond", 1000.0)
+    SECONDS = Unit("seconds", 1.0)
+    MILLISECONDS = Unit("milliseconds", 1000.0)
 
 class Metrics(object):
     """This class encapsulates metrics which can be transported over a channel,
