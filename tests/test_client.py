@@ -428,3 +428,107 @@ def test_collector_set_timer_existing_replace_metadata():
     assert collector.timers[timer_name]["timestamp"] == timestamp
 
 # TODO: Test close() with mocked counters, timers, dimensions.
+@mock.patch('kadabra.client.Dimension')
+@mock.patch('kadabra.client.Counter')
+@mock.patch('kadabra.client.Timer')
+@mock.patch('kadabra.client.Metrics')
+def test_collector_close(mock_metrics, mock_timer, mock_counter,
+        mock_dimension):
+    dimensions_expected = ['dimensionOne', 'dimensionTwo', 'dimensionThree']
+    counters_expected = ['counterOne', 'counterTwo', 'counterThree']
+    timers_expected = ['timerOne', 'timerTwo', 'timerThree']
+    metrics_expected = "metrics"
+
+    mock_dimension.side_effect = dimensions_expected
+    mock_counter.side_effect = counters_expected
+    mock_timer.side_effect = timers_expected
+    mock_metrics.return_value = metrics_expected
+
+    timestamp_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+    collector = kadabra.client.Collector(timestamp_format)
+    collector.lock = MockLock()
+
+    dimensions = [
+        {
+            "name": "dimNameOne",
+            "value": "dimValueOne"
+        },
+        {
+            "name": "dimNameTwo",
+            "value": "dimValueTwo"
+        },
+        {
+            "name": "dimNameThree",
+            "value": "dimValueThree"
+        }
+    ]
+    counters = [
+        {
+            "name": "countOne",
+            "value": 1.0,
+            "timestamp": NOW,
+            "metadata": {"nameCountOne": "valueCountOne"}
+        },
+        {
+            "name": "countTwo",
+            "value": 1.0,
+            "timestamp": NOW + datetime.timedelta(seconds=5),
+            "metadata": {"nameCountTwo": "valueCountTwo"}
+        },
+        {
+            "name": "countThree",
+            "value": 1.0,
+            "timestamp": NOW + datetime.timedelta(seconds=10),
+            "metadata": {"nameCountThree": "valueCountThree"}
+        }
+    ]
+    timers = [
+        {
+            "name": "timerOne",
+            "value": datetime.timedelta(seconds=10),
+            "timestamp": NOW,
+            "unit": kadabra.Units.MILLISECONDS,
+            "metadata": {"nameTimerOne": "valueTimerOne"}
+        },
+        {
+            "name": "timerTwo",
+            "value": datetime.timedelta(seconds=20),
+            "timestamp": NOW + datetime.timedelta(seconds=10),
+            "unit": kadabra.Units.MILLISECONDS,
+            "metadata": {"nameTimerTwo": "valueTimerTwo"}
+        },
+        {
+            "name": "timerThree",
+            "value": datetime.timedelta(seconds=30),
+            "timestamp": NOW + datetime.timedelta(seconds=20),
+            "unit": kadabra.Units.MILLISECONDS,
+            "metadata": {"nameTimerThree": "valueTimerThree"}
+        }
+    ]
+
+    for d in dimensions:
+        collector.set_dimension(**d)
+    for c in counters:
+        collector.add_count(**c)
+    for t in timers:
+        collector.set_timer(**t)
+    metrics = collector.close()
+
+    assert metrics == metrics_expected
+
+    assert len(collector.lock.acquire.mock_calls) ==\
+            len(dimensions) + len(counters) + len(timers) + 1
+    assert len(collector.lock.release.mock_calls) ==\
+            len(dimensions) + len(counters) + len(timers) + 1
+
+    mock_dimension.assert_has_calls([call(d["name"], d["value"])\
+            for d in dimensions], any_order=True)
+    mock_counter.assert_has_calls([call(c["name"], c["timestamp"],
+        c["metadata"], c["value"]) for c in counters], any_order=True)
+    mock_timer.assert_has_calls([call(t["name"], t["timestamp"],
+        t["metadata"], t["value"], t["unit"]) for t in timers],
+        any_order=True)
+
+    mock_metrics.assert_called_with(dimensions_expected, counters_expected,
+            timers_expected, timestamp_format)
