@@ -11,7 +11,7 @@ queue_key = 'queue_key'
 inprogress_key = 'inprogress_key'
 
 def get_unit():
-    return kadabra.RedisChannel(host, port, db, logger, queue_key,
+    return kadabra.channels.RedisChannel(host, port, db, logger, queue_key,
             inprogress_key)
 
 @mock.patch('redis.StrictRedis')
