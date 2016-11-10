@@ -288,5 +288,5 @@ class Metrics(object):
                 [Counter.deserialize(c) for c in value["counters"]],
                 [Timer.deserialize(t) for t in value["timers"]],
                 value["timestamp_format"],
-                value["serialized_at"] or None)
+                value["serialized_at"] or None) # TODO: Fix and unit test
 
