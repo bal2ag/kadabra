@@ -283,10 +283,12 @@ class Metrics(object):
         :rtype: kadabra.Metrics
         :returns: A :class:`Metrics` that the dictionary represents.
         """
+        serialized_at = value["serialized_at"]\
+                if "serialized_at" in value else None
         return Metrics(\
                 [Dimension.deserialize(d) for d in value["dimensions"]],
                 [Counter.deserialize(c) for c in value["counters"]],
                 [Timer.deserialize(t) for t in value["timers"]],
                 value["timestamp_format"],
-                value["serialized_at"] or None) # TODO: Fix and unit test
+                serialized_at)
 

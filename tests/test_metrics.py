@@ -212,3 +212,32 @@ def test_metrics_deserialize(mock_timer_deserialize,
     assert metrics.timers == timers
     assert metrics.timestamp_format == timestamp_format
     assert metrics.serialized_at == serialized_at
+
+@mock.patch("kadabra.Dimension.deserialize")
+@mock.patch("kadabra.Counter.deserialize")
+@mock.patch("kadabra.Timer.deserialize")
+def test_metrics_deserialize_no_serialized_at(mock_timer_deserialize,
+        mock_counter_deserialize, mock_dimension_deserialize):
+    dimensions = ['dimensionOne', 'dimensionTwo', 'dimensionThree']
+    counters = ['counterOne', 'counterTwo', 'counterThree']
+    timers = ['timerOne', 'timerTwo', 'timerThree']
+
+    mock_dimension_deserialize.side_effect = dimensions
+    mock_counter_deserialize.side_effect = counters
+    mock_timer_deserialize.side_effect = timers
+
+    timestamp_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+    metrics_serialized = {
+        "dimensions": dimensions,
+        "counters": counters,
+        "timers": timers,
+        "timestamp_format": timestamp_format
+    }
+
+    metrics = kadabra.Metrics.deserialize(metrics_serialized)
+    assert metrics.dimensions == dimensions
+    assert metrics.counters == counters
+    assert metrics.timers == timers
+    assert metrics.timestamp_format == timestamp_format
+    assert metrics.serialized_at == None
