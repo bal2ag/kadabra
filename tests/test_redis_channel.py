@@ -1,5 +1,6 @@
 import redis
 import kadabra
+import base64, json
 
 from mock import MagicMock, mock
 
@@ -39,16 +40,19 @@ def test_send():
     channel.send(metrics)
 
     metrics.serialize.assert_called_with()
-    channel.client.lpush.assert_called_with(queue_key, serialized)
+    channel.client.lpush.assert_called_with(queue_key,\
+            base64.b64encode(json.dumps(serialized)))
 
 @mock.patch('kadabra.Metrics.deserialize')
 def test_receive_metrics(mock_deserialize):
     deserialized = "test"
     mock_deserialize.return_value = deserialized
     raw_metrics = {"name": "value"}
+    encoded = base64.b64encode(\
+            json.dumps(raw_metrics))
 
     channel = get_unit()
-    channel.client.brpoplpush = MagicMock(return_value=raw_metrics)
+    channel.client.brpoplpush = MagicMock(return_value=encoded)
 
     metrics = channel.receive()
 
@@ -80,7 +84,8 @@ def test_complete_successful():
     channel.complete(metrics)
 
     metrics.serialize.assert_called_with()
-    channel.client.lrem.assert_called_with(inprogress_key, 1, serialized)
+    channel.client.lrem.assert_called_with(inprogress_key, 1,\
+            base64.b64encode(json.dumps(serialized)))
 
 def test_complete_unsuccessful():
     serialized = {"name": "value"}
@@ -95,21 +100,26 @@ def test_complete_unsuccessful():
     channel.complete(metrics)
 
     metrics.serialize.assert_called_with()
-    channel.client.lrem.assert_called_with(inprogress_key, 1, serialized)
+    channel.client.lrem.assert_called_with(inprogress_key, 1,\
+            base64.b64encode(json.dumps(serialized)))
 
 @mock.patch('kadabra.Metrics.deserialize')
 def test_in_progress(mock_deserialize):
-    raw = ['rawOne', 'rawTwo', 'rawThree']
+    query_limit = 3
+    raw = [base64.b64encode(json.dumps({"nameOne": "valueOne"})),
+           base64.b64encode(json.dumps({"nameTwo": "valueTwo"})),
+           base64.b64encode(json.dumps({"nameThree": "valueThree"}))]
     deserialized = ['one', 'two', 'three']
     mock_deserialize.side_effect = deserialized
 
     channel = get_unit()
     channel.client.lrange = MagicMock(return_value=raw)
 
-    in_progress = channel.in_progress()
+    in_progress = channel.in_progress(query_limit)
 
-    channel.client.lrange.assert_called_with(inprogress_key, 0, -1)
+    channel.client.lrange.assert_called_with(inprogress_key, 0,\
+            query_limit - 1)
 
     for r in raw:
-        mock_deserialize.assert_any_call(r)
+        mock_deserialize.assert_any_call(json.loads(base64.b64decode(r)))
     assert in_progress == deserialized
