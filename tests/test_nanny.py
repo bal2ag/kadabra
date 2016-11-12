@@ -4,15 +4,20 @@ import datetime
 from mock import MagicMock, mock, call
 
 NOW = datetime.datetime.utcnow()
+STRPTIME = NOW - datetime.timedelta(seconds=30)
 
 class MockDatetime(datetime.datetime):
     "A fake replacement for date that can be mocked for testing."
     def __new__(cls, *args, **kwargs):
-        return datetime.datetime.__new__(date, *args, **kwargs)
+        return datetime.datetime.__new__(datetime.datetime, *args, **kwargs)
 
     @classmethod
     def utcnow(cls):
         return NOW
+
+    @classmethod
+    def strptime(cls, timestamp, fmt):
+        return STRPTIME
 
 def test_ctor():
     channel = MagicMock()
@@ -72,7 +77,9 @@ def test_start(mock_timer, mock_nanny_thread):
 @mock.patch('kadabra.agent.Timer')
 def test_run_nanny(mock_timer):
     metrics_one = MagicMock()
-    metrics_one.serialized_at = NOW - datetime.timedelta(seconds=30)
+    timestamp_format = "%Y-%m-%dT%H:%M:%SZ"
+    metrics_one.serialized_at = STRPTIME.strftime(timestamp_format)
+    metrics_one.timestamp_format = timestamp_format
     metrics = [metrics_one]
 
     channel = MagicMock()
@@ -130,7 +137,35 @@ def test_run_nanny_missing_serialized_at(mock_timer):
     timer.start.assert_called_with()
 
 @mock.patch('kadabra.agent.Timer')
-def test_run_nanny_exception(mock_timer):
+def test_run_nanny_no_metrics(mock_timer):
+    metrics = []
+
+    channel = MagicMock()
+    channel.in_progress = MagicMock(return_value=metrics)
+    publisher = MagicMock()
+    logger = MagicMock()
+    frequency_seconds = MagicMock()
+    threshold_seconds = MagicMock()
+    query_limit = MagicMock()
+    num_threads = MagicMock()
+    mock_timer.start = MagicMock()
+
+    timer = mock_timer.return_value
+
+    nanny = kadabra.agent.Nanny(channel, publisher, logger, frequency_seconds,
+            threshold_seconds, query_limit, num_threads)
+    nanny.queue = MagicMock()
+    nanny.queue.put = MagicMock()
+    nanny.run_nanny()
+
+    channel.in_progress.assert_called_with(query_limit)
+    nanny.queue.put.assert_has_calls([])
+    mock_timer.assert_called_with(frequency_seconds, nanny.run_nanny)
+    assert timer.name == "KadabraNanny"
+    timer.start.assert_called_with()
+
+@mock.patch('kadabra.agent.Timer')
+def run_nanny_exception(mock_timer):
     channel = MagicMock()
     channel.in_progress = MagicMock()
     channel.in_progress.side_effect = Exception()

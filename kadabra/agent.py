@@ -205,15 +205,20 @@ class Nanny(object):
 
     def run_nanny(self):
         try:
-            count = 0
             self.logger.debug("Running nanny")
             in_progress = self.channel.in_progress(self.query_limit)
+
+            if len(in_progress) == 0:
+                self.logger.debug("No metrics found in progress.")
 
             for metrics in in_progress:
                 should_republish = False
                 if metrics.serialized_at is not None:
                     now = datetime.datetime.utcnow()
-                    delta = (now - metrics.serialized_at).total_seconds()
+                    serialized_at =\
+                            datetime.datetime.strptime(metrics.serialized_at,
+                                    metrics.timestamp_format)
+                    delta = (now - serialized_at).total_seconds()
                     self.logger.debug(\
                             "serialized_at: %s, now: %s, delta: %s" %\
                         (str(metrics.serialized_at), str(now), delta))
@@ -224,7 +229,6 @@ class Nanny(object):
                             "Attempting to republish anyway")
                     should_republish = True
                 if should_republish:
-                    count += 1
                     self.queue.put(metrics)
         except:
             self.logger.warn("Encountered exception trying to get "

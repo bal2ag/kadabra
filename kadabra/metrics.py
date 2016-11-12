@@ -260,8 +260,7 @@ class Metrics(object):
         :returns: The metrics as a dictionary.
         """
         return {
-            "dimensions": [d.serialize(self.timestamp_format)\
-                    for d in self.dimensions],
+            "dimensions": [d.serialize() for d in self.dimensions],
             "counters": [c.serialize(self.timestamp_format)\
                     for c in self.counters],
             "timers": [t.serialize(self.timestamp_format)\
@@ -283,12 +282,15 @@ class Metrics(object):
         :rtype: kadabra.Metrics
         :returns: A :class:`Metrics` that the dictionary represents.
         """
+        timestamp_format = value["timestamp_format"]
         serialized_at = value["serialized_at"]\
                 if "serialized_at" in value else None
         return Metrics(\
                 [Dimension.deserialize(d) for d in value["dimensions"]],
-                [Counter.deserialize(c) for c in value["counters"]],
-                [Timer.deserialize(t) for t in value["timers"]],
-                value["timestamp_format"],
+                [Counter.deserialize(c, timestamp_format)\
+                        for c in value["counters"]],
+                [Timer.deserialize(t, timestamp_format)\
+                        for t in value["timers"]],
+                timestamp_format,
                 serialized_at)
 

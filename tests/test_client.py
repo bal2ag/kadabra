@@ -9,7 +9,7 @@ NOW = datetime.datetime.utcnow()
 class MockDatetime(datetime.datetime):
     "A fake replacement for date that can be mocked for testing."
     def __new__(cls, *args, **kwargs):
-        return datetime.datetime.__new__(date, *args, **kwargs)
+        return datetime.datetime.__new__(datetime.datetime, *args, **kwargs)
 
     @classmethod
     def utcnow(cls):
