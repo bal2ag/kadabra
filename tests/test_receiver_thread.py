@@ -1,6 +1,6 @@
 import kadabra
 
-from mock import MagicMock
+from mock import MagicMock, call
 
 def test_ctor():
     channel = MagicMock()
@@ -67,3 +67,40 @@ def test_run_once_exception():
     metrics.serialize.assert_called_with()
     publisher.publish.assert_called_with(metrics)
     channel.complete.assert_has_calls([])
+
+def test_stop():
+    channel = MagicMock()
+    publisher = MagicMock()
+    logger = MagicMock()
+
+    receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
+    assert receiver_thread.stopped == False
+    receiver_thread.stop()
+    assert receiver_thread.stopped == True
+
+def test_is_stopped():
+    channel = MagicMock()
+    publisher = MagicMock()
+    logger = MagicMock()
+
+    receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
+    receiver_thread.stopped = False
+
+    assert receiver_thread.is_stopped() == False
+    receiver_thread.stopped = True
+    assert receiver_thread.is_stopped() == True
+
+def test_run():
+    channel = MagicMock()
+    publisher = MagicMock()
+    logger = MagicMock()
+
+    receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
+    receiver_thread.run_once = MagicMock()
+    receiver_thread.is_stopped = MagicMock()
+    receiver_thread.is_stopped.side_effect = [False, True]
+
+    receiver_thread.run()
+
+    assert receiver_thread.is_stopped.call_count == 2
+    assert receiver_thread.run_once.call_count == 1

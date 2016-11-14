@@ -66,7 +66,8 @@ class RedisChannel(object):
         :returns: The :class:`Metrics` from the queue.
         """
         self.logger.debug("Receiving metrics")
-        raw = self.client.brpoplpush(self.queue_key, self.inprogress_key)
+        raw = self.client.brpoplpush(self.queue_key, self.inprogress_key,
+                timeout=10)
         if raw:
             rv = json.loads(base64.b64decode(raw))
             self.logger.debug("Got metrics: %s" % rv)

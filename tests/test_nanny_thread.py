@@ -1,4 +1,5 @@
 import kadabra
+import Queue
 
 from mock import MagicMock
 
@@ -28,12 +29,11 @@ def test_run_once_no_metrics():
     nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
     nanny_thread.run_once()
 
-    queue.get.assert_called_with()
+    queue.get.assert_called_with(timeout=10)
     publisher.publish.assert_has_calls([])
     channel.complete.assert_has_calls([])
 
-
-def test_run_once_no_metrics():
+def test_run_once():
     channel = MagicMock()
     publisher = MagicMock()
     queue = MagicMock()
@@ -48,9 +48,27 @@ def test_run_once_no_metrics():
     nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
     nanny_thread.run_once()
 
-    queue.get.assert_called_with()
+    queue.get.assert_called_with(timeout=10)
     publisher.publish.assert_called_with(metrics)
     channel.complete.assert_called_with(metrics)
+
+def test_run_once_empty_queue():
+    channel = MagicMock()
+    publisher = MagicMock()
+    queue = MagicMock()
+    logger = MagicMock()
+
+    queue.get = MagicMock()
+    queue.get.side_effect = Queue.Empty()
+    publisher.publish = MagicMock()
+    channel.complete = MagicMock()
+
+    nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
+    nanny_thread.run_once()
+
+    queue.get.assert_called_with(timeout=10)
+    publisher.publish.assert_has_calls([])
+    channel.complete.assert_has_calls([])
 
 def test_run_once_exception():
     channel = MagicMock()
@@ -68,6 +86,45 @@ def test_run_once_exception():
     nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
     nanny_thread.run_once()
 
-    queue.get.assert_called_with()
+    queue.get.assert_called_with(timeout=10)
     publisher.publish.assert_called_with(metrics)
     channel.complete.assert_has_calls([])
+
+def test_stop():
+    channel = MagicMock()
+    publisher = MagicMock()
+    queue = MagicMock()
+    logger = MagicMock()
+
+    nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
+    nanny_thread.stopped = False
+    nanny_thread.stop()
+
+    assert nanny_thread.stopped == True
+
+def test_is_stopped():
+    channel = MagicMock()
+    publisher = MagicMock()
+    queue = MagicMock()
+    logger = MagicMock()
+
+    nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
+    assert nanny_thread.is_stopped() == False
+    nanny_thread.stopped = True
+    assert nanny_thread.is_stopped() == True
+
+def test_run():
+    channel = MagicMock()
+    publisher = MagicMock()
+    queue = MagicMock()
+    logger = MagicMock()
+
+    nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
+    nanny_thread.run_once = MagicMock()
+    nanny_thread.is_stopped = MagicMock()
+    nanny_thread.is_stopped.side_effect = [False, True]
+
+    nanny_thread.run()
+
+    assert nanny_thread.is_stopped.call_count == 2
+    assert nanny_thread.run_once.call_count == 1

@@ -50,3 +50,28 @@ def test_start(mock_receiver_thread):
 
     for thread in threads:
         thread.start.assert_called_with()
+
+@mock.patch('kadabra.agent.ReceiverThread')
+def test_stop(mock_receiver_thread):
+    channel = MagicMock()
+    publisher = MagicMock()
+    logger = MagicMock()
+    num_threads = 3
+
+    thread_one = MagicMock()
+    thread_one.stop = MagicMock()
+    thread_one.name = "threadOne"
+    thread_two = MagicMock()
+    thread_two.stop = MagicMock()
+    thread_two.name = "threadTwo"
+    thread_three = MagicMock()
+    thread_three.stop = MagicMock()
+    thread_three.name = "threadThree"
+    threads = [thread_one, thread_two, thread_three]
+    mock_receiver_thread.side_effect = threads
+
+    receiver = kadabra.agent.Receiver(channel, publisher, logger, num_threads)
+    receiver.stop()
+
+    for thread in threads:
+        thread.stop.assert_called_with()

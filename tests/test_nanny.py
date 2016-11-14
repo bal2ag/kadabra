@@ -165,7 +165,7 @@ def test_run_nanny_no_metrics(mock_timer):
     timer.start.assert_called_with()
 
 @mock.patch('kadabra.agent.Timer')
-def run_nanny_exception(mock_timer):
+def test_run_nanny_exception(mock_timer):
     channel = MagicMock()
     channel.in_progress = MagicMock()
     channel.in_progress.side_effect = Exception()
@@ -186,8 +186,61 @@ def run_nanny_exception(mock_timer):
     nanny.run_nanny()
 
     channel.in_progress.assert_called_with(query_limit)
+
     nanny.queue.put.assert_has_calls([])
     mock_timer.assert_called_with(frequency_seconds, nanny.run_nanny)
     assert timer.name == "KadabraNanny"
     timer.start.assert_called_with()
 
+def test_stop_timer_none():
+    channel = MagicMock()
+    publisher = MagicMock()
+    logger = MagicMock()
+    frequency_seconds = MagicMock()
+    threshold_seconds = MagicMock()
+    query_limit = MagicMock()
+    num_threads = MagicMock()
+
+    thread_one = MagicMock()
+    thread_one.stop = MagicMock()
+    thread_two = MagicMock()
+    thread_two.stop = MagicMock()
+    thread_three = MagicMock()
+    thread_three.stop = MagicMock()
+    threads = [thread_one, thread_two, thread_three]
+
+    nanny = kadabra.agent.Nanny(channel, publisher, logger, frequency_seconds,
+            threshold_seconds, query_limit, num_threads)
+    nanny.threads = threads
+    nanny.stop()
+
+    for thread in threads:
+        thread.stop.assert_called_with()
+
+def test_stop_timer_none():
+    channel = MagicMock()
+    publisher = MagicMock()
+    logger = MagicMock()
+    frequency_seconds = MagicMock()
+    threshold_seconds = MagicMock()
+    query_limit = MagicMock()
+    num_threads = MagicMock()
+
+    thread_one = MagicMock()
+    thread_one.stop = MagicMock()
+    thread_two = MagicMock()
+    thread_two.stop = MagicMock()
+    thread_three = MagicMock()
+    thread_three.stop = MagicMock()
+    threads = [thread_one, thread_two, thread_three]
+
+    nanny = kadabra.agent.Nanny(channel, publisher, logger, frequency_seconds,
+            threshold_seconds, query_limit, num_threads)
+    nanny.threads = threads
+    nanny.timer = MagicMock()
+    nanny.timer.cancel = MagicMock()
+    nanny.stop()
+
+    nanny.timer.cancel.assert_called_with()
+    for thread in threads:
+        thread.stop.assert_called_with()

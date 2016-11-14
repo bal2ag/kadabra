@@ -1,7 +1,6 @@
-import threading, logging, datetime, json
+import threading, logging, datetime, json, Queue, time
 
 from threading import Timer
-from Queue import Queue
 
 from .channels import RedisChannel
 from .publishers import DebugPublisher, InfluxDBPublisher
@@ -71,17 +70,36 @@ class Agent(object):
                 nanny_frequency_seconds, nanny_threshold_seconds,
                 nanny_query_limit, nanny_num_threads)
 
+        self.stopped = False
+
     def start(self):
         """Start the agent. This will spawn :class:`ReceiverThread`s which
         listen on the channel to receive and publish metrics. These threads
         exist for the life of the process that starts the agent, and the agent
         blocks on each thread; thus, you should call this method from a
-        dedicated Python process, as it will block until the process is killed."""
+        dedicated Python process, as it will block until the process is killed
+        or a keyboard interrupt is detected."""
         self.logger.info("Starting agent...")
         self.receiver.start()
         self.nanny.start()
-        for thread in self.receiver.threads:
-            thread.join()
+
+        try:
+            while not self.is_stopped():
+                time.sleep(10)
+        except KeyboardInterrupt:
+            self.stop()
+
+    def is_stopped(self):
+        return self.stopped
+
+    def stop(self, *args, **kwargs):
+        """Stop the Agent gracefully by letting all :class:`ReceiverThread`s
+        and :class:`NannyThread`s finish processing."""
+        self.logger.info("Gracefully stopping the agent... "
+                         "This may take up to 10 seconds.")
+        self.stopped = True
+        self.nanny.stop()
+        self.receiver.stop()
 
 class Receiver(object):
     """Manages :class:`ReceiverThread`s which receive metrics from the channel,
@@ -117,6 +135,11 @@ class Receiver(object):
             self.logger.info("Starting %s" % thread.name)
             thread.start()
 
+    def stop(self):
+        self.logger.info("Stopping Receiver...")
+        for thread in self.threads:
+            thread.stop()
+
 class ReceiverThread(threading.Thread):
     """Listens to a channel for metrics, and publishes them.
 
@@ -131,10 +154,20 @@ class ReceiverThread(threading.Thread):
         self.publisher = publisher
         self.logger = logger
 
+        self.stopped = False
+
+    def stop(self):
+        self.logger.info("Stopping %s..." % self.name)
+        self.stopped = True
+
+    def is_stopped(self):
+        return self.stopped
+
     def run(self):
         """Run this object until stopped."""
-        while True:
+        while not self.is_stopped():
             self.run_once()
+        self.logger.info("Stopped %s." % self.name)
 
     def run_once(self):
         """Runs this object once. It will receive a message from the channel
@@ -186,8 +219,9 @@ class Nanny(object):
         self.query_limit = query_limit
         self.num_threads = num_threads
 
-        self.queue = Queue()
+        self.queue = Queue.Queue()
         self.threads = []
+        self.timer = None
 
     def start(self):
         self.threads = []
@@ -201,7 +235,15 @@ class Nanny(object):
 
         timer = Timer(self.frequency_seconds, self.run_nanny)
         timer.name = "KadabraNanny"
+        self.timer = timer
         timer.start()
+
+    def stop(self):
+        self.logger.info("Stopping Nanny...")
+        if self.timer is not None:
+            self.timer.cancel()
+        for thread in self.threads:
+            thread.stop()
 
     def run_nanny(self):
         try:
@@ -236,6 +278,7 @@ class Nanny(object):
         finally:
             timer = Timer(self.frequency_seconds, self.run_nanny)
             timer.name = "KadabraNanny"
+            self.timer = timer
             timer.start()
 
 class NannyThread(threading.Thread):
@@ -255,21 +298,35 @@ class NannyThread(threading.Thread):
         self.queue = queue
         self.logger = logger
 
+        self.stopped = False
+
+    def stop(self):
+        """Stop this NannyThread from running."""
+        self.logger.info("Stopping %s..." % self.name)
+        self.stopped = True
+
+    def is_stopped(self):
+        """Whether or not this NannyThread has been stopped."""
+        return self.stopped
+
     def run(self):
         """Run this object until stopped."""
-        while True:
+        while not self.is_stopped():
             self.run_once()
+        self.logger.info("Stopped %s." % self.name)
 
     def run_once(self):
         """Listen to the queue for metrics to publish and attempt to publish
         them and mark them as complete."""
         try:
-            metrics = self.queue.get()
+            metrics = self.queue.get(timeout=10)
             if metrics is not None:
                 self.logger.debug("Publishing metrics: %s" %\
                         metrics.serialize())
                 self.publisher.publish(metrics)
                 self.channel.complete(metrics)
+        except Queue.Empty:
+            pass
         except:
             self.logger.warn("Nanny thread encountered exception",\
                     exc_info=1)

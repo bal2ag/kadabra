@@ -56,7 +56,8 @@ def test_receive_metrics(mock_deserialize):
 
     metrics = channel.receive()
 
-    channel.client.brpoplpush.assert_called_with(queue_key, inprogress_key)
+    channel.client.brpoplpush.assert_called_with(queue_key, inprogress_key,
+            timeout=10)
     mock_deserialize.assert_called_with(raw_metrics)
     assert metrics == deserialized
 
@@ -68,7 +69,8 @@ def test_receive_nometrics():
 
     metrics = channel.receive()
 
-    channel.client.brpoplpush.assert_called_with(queue_key, inprogress_key)
+    channel.client.brpoplpush.assert_called_with(queue_key, inprogress_key,
+            timeout=10)
     assert metrics == None
 
 def test_complete_successful():

@@ -1,7 +1,7 @@
 import kadabra
 import pytest
 
-from mock import MagicMock, mock
+from mock import MagicMock, mock, call
 
 def test_ctor_unrecognized_channel():
     with pytest.raises(Exception):
@@ -107,7 +107,8 @@ def test_ctor_custom_args(mock_nanny, mock_receiver, mock_redis_channel,
 @mock.patch('kadabra.agent.RedisChannel')
 @mock.patch('kadabra.agent.Receiver')
 @mock.patch('kadabra.agent.Nanny')
-def test_start(mock_nanny, mock_receiver, mock_redis_channel,
+@mock.patch('kadabra.agent.time.sleep')
+def test_start(mock_sleep, mock_nanny, mock_receiver, mock_redis_channel,
         mock_debug_publisher):
     nanny = mock_nanny.return_value
     nanny.start = MagicMock()
@@ -130,9 +131,117 @@ def test_start(mock_nanny, mock_receiver, mock_redis_channel,
     mock_debug_publisher.DEFAULT_ARGS = publisher_default_args
 
     agent = kadabra.Agent()
+    agent.is_stopped = MagicMock()
+    agent.is_stopped.side_effect = [False, True]
     agent.start()
 
     agent.receiver.start.assert_called_with()
     agent.nanny.start.assert_called_with()
-    for thread in agent.receiver.threads:
-        thread.join.assert_called_with()
+    assert agent.is_stopped.call_count == 2
+    mock_sleep.assert_has_calls([call(10)])
+
+@mock.patch('kadabra.agent.DebugPublisher')
+@mock.patch('kadabra.agent.RedisChannel')
+@mock.patch('kadabra.agent.Receiver')
+@mock.patch('kadabra.agent.Nanny')
+@mock.patch('kadabra.agent.time.sleep')
+def test_start(mock_sleep, mock_nanny, mock_receiver, mock_redis_channel,
+        mock_debug_publisher):
+    mock_sleep.side_effect = KeyboardInterrupt()
+
+    nanny = mock_nanny.return_value
+    nanny.start = MagicMock()
+    receiver = mock_receiver.return_value
+    receiver.start = MagicMock()
+
+    mock_thread_one = MagicMock()
+    mock_thread_one.join = MagicMock()
+    mock_thread_two = MagicMock()
+    mock_thread_two.join = MagicMock()
+    mock_thread_three = MagicMock()
+    mock_thread_three.join = MagicMock()
+    receiver.threads = [mock_thread_one, mock_thread_two,
+            mock_thread_three]
+
+    channel_default_args = {"channelArg1": "1", "channelArg2": 2}
+    publisher_default_args = {"publisherArg1": "5", "publisherArg2": 6}
+
+    mock_redis_channel.DEFAULT_ARGS = channel_default_args
+    mock_debug_publisher.DEFAULT_ARGS = publisher_default_args
+
+    agent = kadabra.Agent()
+    agent.is_stopped = MagicMock()
+    agent.is_stopped.return_value = False
+    agent.stop = MagicMock()
+    agent.start()
+
+    agent.receiver.start.assert_called_with()
+    agent.nanny.start.assert_called_with()
+    assert agent.is_stopped.call_count == 1
+    agent.stop.assert_called_with()
+
+@mock.patch('kadabra.agent.DebugPublisher')
+@mock.patch('kadabra.agent.RedisChannel')
+@mock.patch('kadabra.agent.Receiver')
+@mock.patch('kadabra.agent.Nanny')
+@mock.patch('kadabra.agent.time.sleep')
+def test_is_stopped(mock_sleep, mock_nanny, mock_receiver, mock_redis_channel,
+        mock_debug_publisher):
+    mock_sleep.side_effect = KeyboardInterrupt()
+
+    nanny = mock_nanny.return_value
+    receiver = mock_receiver.return_value
+
+    mock_thread_one = MagicMock()
+    mock_thread_one.join = MagicMock()
+    mock_thread_two = MagicMock()
+    mock_thread_two.join = MagicMock()
+    mock_thread_three = MagicMock()
+    mock_thread_three.join = MagicMock()
+    receiver.threads = [mock_thread_one, mock_thread_two,
+            mock_thread_three]
+
+    channel_default_args = {"channelArg1": "1", "channelArg2": 2}
+    publisher_default_args = {"publisherArg1": "5", "publisherArg2": 6}
+
+    mock_redis_channel.DEFAULT_ARGS = channel_default_args
+    mock_debug_publisher.DEFAULT_ARGS = publisher_default_args
+
+    agent = kadabra.Agent()
+    agent.is_stopped() == False
+
+@mock.patch('kadabra.agent.DebugPublisher')
+@mock.patch('kadabra.agent.RedisChannel')
+@mock.patch('kadabra.agent.Receiver')
+@mock.patch('kadabra.agent.Nanny')
+@mock.patch('kadabra.agent.time.sleep')
+def test_stop(mock_sleep, mock_nanny, mock_receiver, mock_redis_channel,
+        mock_debug_publisher):
+    mock_sleep.side_effect = KeyboardInterrupt()
+
+    nanny = mock_nanny.return_value
+    nanny.stop = MagicMock()
+    receiver = mock_receiver.return_value
+    receiver.stop = MagicMock()
+
+    mock_thread_one = MagicMock()
+    mock_thread_one.join = MagicMock()
+    mock_thread_two = MagicMock()
+    mock_thread_two.join = MagicMock()
+    mock_thread_three = MagicMock()
+    mock_thread_three.join = MagicMock()
+    receiver.threads = [mock_thread_one, mock_thread_two,
+            mock_thread_three]
+
+    channel_default_args = {"channelArg1": "1", "channelArg2": 2}
+    publisher_default_args = {"publisherArg1": "5", "publisherArg2": 6}
+
+    mock_redis_channel.DEFAULT_ARGS = channel_default_args
+    mock_debug_publisher.DEFAULT_ARGS = publisher_default_args
+
+    agent = kadabra.Agent()
+    assert agent.is_stopped() == False
+    agent.stop()
+    assert agent.is_stopped() == True
+    nanny.stop.assert_called_with()
+    receiver.stop.assert_called_with()
