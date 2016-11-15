@@ -28,14 +28,15 @@ class Dimension(object):
 
     @staticmethod
     def deserialize(value):
-        """Deserializes a dictionary into a :class:`Dimension` instance.
-
-        :type value: dict
-        :param value: The dictionary to deserialize into a :class:`Dimension`
+        """Deserializes a dictionary into a :class:`~kadabra.Dimension`
         instance.
 
-        :rtype: kadabra.Dimension
-        :returns: A :class:`Dimension` that the dictionary represents.
+        :type value: dict
+        :param value: The dictionary to deserialize into a
+                      :class:`~kadabra.Dimension` instance.
+
+        :rtype: ~kadabra.Dimension
+        :returns: A dimension that the dictionary represents.
         """
         return Dimension(value["name"], value["value"])
 
@@ -45,13 +46,13 @@ class Metric(object):
     :type name: string
     :param name: The name of the metric.
 
-    :type timestamp: datetime.datetime
+    :type timestamp: ~datetime.datetime
     :param timestamp: The timestamp of the metric.
 
     :type metadata: dict
     :param metadata: Metadata associated with this metric, in the form of
-    string-string key-value pairs. This metadata is meant to be stored as
-    non-indexed fields in the metrics storage.
+                     string-string key-value pairs. This metadata is meant to
+                     be stored as non-indexed fields in the metrics storage.
     """
     def __init__(self, name, timestamp, metadata):
         self.name = name
@@ -65,13 +66,13 @@ class Counter(Metric):
     :type name: string
     :param name: The name of the metric.
 
-    :type timestamp: datetime.datetime
+    :type timestamp: ~datetime.datetime
     :param timestamp: The timestamp of the metric.
 
     :type metadata: dict
     :param metadata: Metadata associated with this metric, in the form of
-    string-string key-value pairs. This metadata is meant to be stored as
-    non-indexed fields in the metrics storage.
+                     string-string key-value pairs. This metadata is meant to
+                     be stored as non-indexed fields in the metrics storage.
 
     :type value: float
     :param value: The floating-point value of this counter.
@@ -98,14 +99,15 @@ class Counter(Metric):
 
     @staticmethod
     def deserialize(value, timestamp_format):
-        """Deserializes a dictionary into a :class:`Counter` instance.
-
-        :type value: dict
-        :param value: The dictionary to deserialize into a :class:`Counter`
+        """Deserializes a dictionary into a :class:`~kadabra.Counter`
         instance.
 
-        :rtype: kadabra.Counter
-        :returns: A :class:`Counter` that the dictionary represents.
+        :type value: dict
+        :param value: The dictionary to deserialize into a
+                      :class:`~kadabra.Counter` instance.
+
+        :rtype: ~kadabra.Counter
+        :returns: A counter that the dictionary represents.
         """
         return Counter(value["name"],
                 datetime.datetime.strptime(value["timestamp"],
@@ -115,22 +117,22 @@ class Counter(Metric):
 
 class Timer(Metric):
     """A timer metric representing an elapsed period of time, identified by a
-    :class:`datetime.timedelta` and a :class:`Unit`.
+    :class:`datetime.timedelta` and a :class:`~kadabra.Unit`.
 
     :type name: string
     :param name: The name of the timer.
 
-    :type timestamp: datetime.datetime
+    :type timestamp: ~datetime.datetime
     :param timestamp: The timestamp of the timer.
 
     :type metadata: dict
     :param metadata: The metadata associated with the timer.
 
-    :type value: datetime.timedelta
+    :type value: ~datetime.timedelta
     :param value: The value of the timer.
 
     :type unit: kadabra.Unit
-    :param unit: The :class:`Unit` of the timer.
+    :param unit: The unit of the timer value.
     """
     def __init__(self, name, timestamp, metadata, value, unit):
         self.value = value
@@ -156,14 +158,14 @@ class Timer(Metric):
 
     @staticmethod
     def deserialize(value, timestamp_format):
-        """Deserializes a dictionary into a :class:`Timer` instance.
+        """Deserializes a dictionary into a :class:`~kadabra.Timer` instance.
 
         :type value: dict
-        :param value: The dictionary to deserialize into a :class:`Timer`
-        instance.
+        :param value: The dictionary to deserialize into a
+                      :class:`~kadabra.Timer` instance.
 
-        :rtype: kadabra.Timer
-        :returns: A :class:`Timer` that the dictionary represents.
+        :rtype: ~kadabra.Timer
+        :returns: A timer that the dictionary represents.
         """
         unit = Unit.deserialize(value["unit"])
         seconds = value["value"] / unit.seconds_offset
@@ -177,7 +179,7 @@ class Timer(Metric):
 
 class Unit(object):
     """A unit, representing an offset from seconds. This is used by by
-    :class:`Timer`s for unambiguous reporting of the timer's value.
+    :class:`kadabra.Timer`\s for unambiguous reporting of the timer's value.
 
     :type name: string
     :param name: The name of the unit.
@@ -202,20 +204,23 @@ class Unit(object):
 
     @staticmethod
     def deserialize(value):
-        """Deserializes a dictionary into a :class:`Unit` instance.
+        """Deserializes a dictionary into a :class:`~kadabra.Unit` instance.
 
         :type value: dict
-        :param value: The dictionary to deserialize into a :class:`Unit`
-        instance.
+        :param value: The dictionary to deserialize into a
+                      :class:`~kadabra.Unit` instance.
 
-        :rtype: kadabra.Unit
-        :returns: A :class:`Unit` that the dictionary represents.
+        :rtype: ~kadabra.Unit
+        :returns: A unit that the dictionary represents.
         """
         return Unit(value["name"], value["seconds_offset"])
 
 class Units(object):
     """Container for commonly used units."""
+    #: Unit representing seconds.
     SECONDS = Unit("seconds", 1.0)
+
+    #: Unit representing milliseconds.
     MILLISECONDS = Unit("milliseconds", 1000.0)
 
 class Metrics(object):
@@ -226,23 +231,21 @@ class Metrics(object):
     receives and publishes the metrics).
 
     :type dimensions: list
-    :param dimensions: :class:`Dimension`s for this set of metrics.
+    :param dimensions: :class:`~kadabra.Dimension`\s for this set of metrics.
 
     :type counters: list
-    :param counters: :class:`Counter`s for this set of metrics.
+    :param counters: :class:`~kadabra.Counter`\s for this set of metrics.
 
     :type timers: list
-    :param timers: :class:`Timer`s for this set of metrics.
+    :param timers: :class:`~kadabra.Timer`\s for this set of metrics.
 
     :type timestamp_format: string
-    :param timers: The format string for timestamps.
+    :param timestamp_format: The format string for timestamps.
 
     :type serialized_at: string
-    :param serialzied_at: The timestamp string for when the metrics were
-    serialized, if they were previously serialized.
+    :param serialized_at: The timestamp string for when the metrics were
+                          serialized, if they were previously serialized.
     """
-    VERSION = 1.0
-
     def __init__(self, dimensions, counters, timers,
             timestamp_format="%Y-%m-%dT%H:%M:%S.%fZ",
             serialized_at=None):
@@ -273,14 +276,15 @@ class Metrics(object):
 
     @staticmethod
     def deserialize(value):
-        """Deserializes a dictionary into a :class:`Metrics` instance.
-
-        :type value: dict
-        :param value: The dictionary to deserialize into a :class:`Metrics`
+        """Deserializes a dictionary into a :class:`~kadabra.Metrics`
         instance.
 
-        :rtype: kadabra.Metrics
-        :returns: A :class:`Metrics` that the dictionary represents.
+        :type value: dict
+        :param value: The dictionary to deserialize into a
+                      :class:`~kadabra.Metrics` instance.
+
+        :rtype: ~kadabra.Metrics
+        :returns: A metrics that the dictionary represents.
         """
         timestamp_format = value["timestamp_format"]
         serialized_at = value["serialized_at"]\

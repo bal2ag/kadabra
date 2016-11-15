@@ -7,6 +7,10 @@ class DebugPublisher(object):
     :type logger_name: string
     :param logger_name: The name of the logger to use.
     """
+
+    #: Default arguments for this publisher. These will be used by the
+    #: agent to initialize this publisher if custom configuration values are
+    #: not provided.
     DEFAULT_ARGS = {"logger_name": "kadabra.publisher"}
 
     def __init__(self, logger_name):
@@ -14,11 +18,11 @@ class DebugPublisher(object):
         self.logger = logging.getLogger(logger_name)
 
     def publish(self, metrics):
-        """Publish the metrics by logging them to the publisher's logger at the
-        INFO level.
+        """Publish the metrics by logging them (in serialized JSON format) to
+        the publisher's logger at the INFO level.
 
-        :type metrics: kadabra.metrics.Metrics
-        :param metrics: The :class:`Metrics` instance to publish.
+        :type metrics: ~kadabra.Metrics
+        :param metrics: The metrics to publish.
         """
         self.logger.info(metrics.serialize())
 
@@ -31,23 +35,28 @@ class InfluxDBPublisher(object):
     metadata will become additional fields, although note that 'value' is a
     reserved name that will be overwritten for both metric types, and 'unit'
     will be overwritten for timers. For more information about InfluxDB see
-    :ref:`https://docs.influxdata.com/influxdb`.
+    the `docs <https://docs.influxdata.com/influxdb>`.
 
     :type host: string
     :param host: The hostname of the InfluxDB database.
 
-    :type port: integer
+    :type port: int
     :param port: The port of the InfluxDB database.
 
     :type database: string
     :param database: The name of the database to use for publishing metrics
-    with this publisher. Note that this database must exist prior to publishing
-    metrics with this publisher - make sure you set it up beforehand!
+                     with this publisher. Note that this database must exist
+                     prior to publishing metrics with this publisher - make
+                     sure you set it up beforehand!
 
-    :type timeout: integer
+    :type timeout: int
     :param timeout: The timeout to wait for when calling the InfluxDB database
-    before failing.
+                    before failing.
     """
+
+    #: Default arguments for this publisher. These will be used by the
+    #: agent to initialize this publisher if custom configuration values are
+    #: not provided.
     DEFAULT_ARGS = {"host": "localhost", "port": 8086,\
             "database": "kadabra", "timeout": 5}
 
@@ -59,8 +68,8 @@ class InfluxDBPublisher(object):
     def publish(self, metrics):
         """Publish the metrics by writing them to InfluxDB.
 
-        :type metrics: kadabra.Metrics
-        :param metrics: The :class:`Metrics` to publish.
+        :type metrics: ~kadabra.Metrics
+        :param metrics: The metrics to publish.
         """
         data = []
         tags = {d.name: d.value for d in metrics.dimensions}

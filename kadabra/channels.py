@@ -3,18 +3,18 @@ from .metrics import Metrics
 import logging, json, base64
 
 class RedisChannel(object):
-    """A channel for transporting metrics using Redis as the transport medium.
+    """A channel for transporting metrics using Redis.
 
     :type host: string
     :param host: The host of the Redis server.
 
-    :type port: integer
+    :type port: int
     :param port: The port of the Redis server.
 
-    :type db: integer
+    :type db: int
     :param db: The database to use on the Redis server. This should be used
-    exclusively for Kadabra to prevent collisions with keys that might be used
-    by your application.
+               exclusively for Kadabra to prevent collisions with keys that
+               might be used by your application.
 
     :type logger: string
     :param logger: The name of the logger to use.
@@ -32,10 +32,7 @@ class RedisChannel(object):
             "inprogress_key": "kadabra_inprogress"
     }
 
-    def __init__(self, host, port, db,
-            logger='kadabra.channel',
-            queue_key='kadabra_queue',
-            inprogress_key='kadabra_inprogress'):
+    def __init__(self, host, port, db, logger, queue_key, inprogress_key):
         from redis import StrictRedis
         self.client = StrictRedis(host=host, port=port, db=db)
         self.logger = logging.getLogger(logger)
@@ -43,27 +40,29 @@ class RedisChannel(object):
         self.inprogress_key = inprogress_key
 
     def send(self, metrics):
-        """Send :class:`Metrics` to a Redis list, which will act as queue for
+        """Send metrics to a Redis list, which will act as queue for pending
         metrics to be received and published.
 
-        :type metrics: kadabra.Metrics
-        :param metrics: The :class:`Metrics` to be sent.
+        :type metrics: ~kadabra.Metrics
+        :param metrics: The metrics to be sent.
         """
         to_push = metrics.serialize()
-        self.logger.debug("Sending %s" % str(to_push))
+        self.logger.debug("Sending %s" % to_push)
         self.client.lpush(self.queue_key,\
                 base64.b64encode(json.dumps(to_push)))
-        self.logger.debug("Successfully sent %s" % str(to_push))
+        self.logger.debug("Successfully sent %s" % to_push)
 
     def receive(self):
         """Receive metrics from the queue so they can be published. Once
         received, the metrics will be moved into a temporary "in progress"
-        queue until they have been acknolwedged as completed (by calling
-        :meth:`complete`). This method will block until there are metrics
-        available on the queue or after a long timeout.
+        queue until they have been acknowledged as published (by calling
+        :meth:`~kadabra.channels.RedisChannel.complete`). This method will
+        block until there are metrics available on the queue or after 10
+        seconds.
 
-        :rtype: kadabra.Metrics
-        :returns: The :class:`Metrics` from the queue.
+        :rtype: ~kadabra.Metrics
+        :returns: The metrics to be published, or None if there were no metrics
+                  received after the timeout.
         """
         self.logger.debug("Receiving metrics")
         raw = self.client.brpoplpush(self.queue_key, self.inprogress_key,
@@ -76,11 +75,11 @@ class RedisChannel(object):
         return None
 
     def complete(self, metrics):
-        """Mark metrics as completed by removing them from the in progress
+        """Mark metrics as completed by removing them from the in-progress
         queue.
 
-        :type metrics: kadabra.Metrics
-        :param metrics: The :class:`Metrics` to mark as complete.
+        :type metrics: ~kadabra.Metrics
+        :param metrics: The metris to mark as complete.
         """
         to_complete = metrics.serialize()
         self.logger.debug("Marking %s as complete" % str(to_complete))
@@ -96,12 +95,12 @@ class RedisChannel(object):
     def in_progress(self, query_limit):
         """Return a list of the metrics that are in_progress.
 
-        :type query_limit: integer
+        :type query_limit: int
         :param query_limit: The maximum number of items to get from the in
-        progress queue.
+                            progress queue.
 
         :rtype: list
-        :returns: A list of :class:`Metric`s that are in progress.
+        :returns: A list of :class:`Metric`\s that are in progress.
         """
         in_progress = self.client.lrange(self.inprogress_key, 0,\
                 query_limit - 1)
