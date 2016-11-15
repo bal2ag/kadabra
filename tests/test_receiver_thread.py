@@ -23,7 +23,7 @@ def test_run_once_no_metrics():
     channel.complete = MagicMock()
 
     receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
-    receiver_thread.run_once()
+    receiver_thread._run_once()
 
     channel.receive.assert_called_with()
     publisher.publish.assert_has_calls([])
@@ -41,7 +41,7 @@ def test_run_once_metrics():
     channel.complete = MagicMock()
 
     receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
-    receiver_thread.run_once()
+    receiver_thread._run_once()
 
     channel.receive.assert_called_with()
     metrics.serialize.assert_called_with()
@@ -61,7 +61,7 @@ def test_run_once_exception():
     channel.complete = MagicMock()
 
     receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
-    receiver_thread.run_once()
+    receiver_thread._run_once()
 
     channel.receive.assert_called_with()
     metrics.serialize.assert_called_with()
@@ -86,9 +86,9 @@ def test_is_stopped():
     receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
     receiver_thread.stopped = False
 
-    assert receiver_thread.is_stopped() == False
+    assert receiver_thread._is_stopped() == False
     receiver_thread.stopped = True
-    assert receiver_thread.is_stopped() == True
+    assert receiver_thread._is_stopped() == True
 
 def test_run():
     channel = MagicMock()
@@ -96,11 +96,11 @@ def test_run():
     logger = MagicMock()
 
     receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
-    receiver_thread.run_once = MagicMock()
-    receiver_thread.is_stopped = MagicMock()
-    receiver_thread.is_stopped.side_effect = [False, True]
+    receiver_thread._run_once = MagicMock()
+    receiver_thread._is_stopped = MagicMock()
+    receiver_thread._is_stopped.side_effect = [False, True]
 
     receiver_thread.run()
 
-    assert receiver_thread.is_stopped.call_count == 2
-    assert receiver_thread.run_once.call_count == 1
+    assert receiver_thread._is_stopped.call_count == 2
+    assert receiver_thread._run_once.call_count == 1

@@ -98,11 +98,11 @@ def test_run_nanny(mock_timer):
             threshold_seconds, query_limit, num_threads)
     nanny.queue = MagicMock()
     nanny.queue.put = MagicMock()
-    nanny.run_nanny()
+    nanny._run_nanny()
 
     channel.in_progress.assert_called_with(query_limit)
     nanny.queue.put.assert_called_with(metrics_one)
-    mock_timer.assert_called_with(frequency_seconds, nanny.run_nanny)
+    mock_timer.assert_called_with(frequency_seconds, nanny._run_nanny)
     assert timer.name == "KadabraNanny"
     timer.start.assert_called_with()
 
@@ -128,11 +128,11 @@ def test_run_nanny_missing_serialized_at(mock_timer):
             threshold_seconds, query_limit, num_threads)
     nanny.queue = MagicMock()
     nanny.queue.put = MagicMock()
-    nanny.run_nanny()
+    nanny._run_nanny()
 
     channel.in_progress.assert_called_with(query_limit)
     nanny.queue.put.assert_called_with(metrics_one)
-    mock_timer.assert_called_with(frequency_seconds, nanny.run_nanny)
+    mock_timer.assert_called_with(frequency_seconds, nanny._run_nanny)
     assert timer.name == "KadabraNanny"
     timer.start.assert_called_with()
 
@@ -156,11 +156,11 @@ def test_run_nanny_no_metrics(mock_timer):
             threshold_seconds, query_limit, num_threads)
     nanny.queue = MagicMock()
     nanny.queue.put = MagicMock()
-    nanny.run_nanny()
+    nanny._run_nanny()
 
     channel.in_progress.assert_called_with(query_limit)
     nanny.queue.put.assert_has_calls([])
-    mock_timer.assert_called_with(frequency_seconds, nanny.run_nanny)
+    mock_timer.assert_called_with(frequency_seconds, nanny._run_nanny)
     assert timer.name == "KadabraNanny"
     timer.start.assert_called_with()
 
@@ -183,12 +183,12 @@ def test_run_nanny_exception(mock_timer):
             threshold_seconds, query_limit, num_threads)
     nanny.queue = MagicMock()
     nanny.queue.put = MagicMock()
-    nanny.run_nanny()
+    nanny._run_nanny()
 
     channel.in_progress.assert_called_with(query_limit)
 
     nanny.queue.put.assert_has_calls([])
-    mock_timer.assert_called_with(frequency_seconds, nanny.run_nanny)
+    mock_timer.assert_called_with(frequency_seconds, nanny._run_nanny)
     assert timer.name == "KadabraNanny"
     timer.start.assert_called_with()
 

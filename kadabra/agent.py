@@ -8,17 +8,21 @@ from .publishers import DebugPublisher, InfluxDBPublisher
 from .config import DEFAULT_CONFIG
 
 class Agent(object):
-    """Reads metrics from a channel and publishes them to backend storage. The
-    agent will spin up threads which listen to the configured channel and
-    attempt to publish the metrics into a backend using the configured
-    publisher. The agent will also periodically monitor the metrics that have
-    been in progress for a while and attempt to republish them. Because the
-    agent is meant to run indefinitely, side by side with your application, it
-    should be configured and started in a separate, dedicated process.
+    """Reads metrics from a channel and publishes them (see
+    :ref:`api-publishers`). The agent will spin up threads which listen
+    to the configured channel and attempt to publish the metrics using the
+    configured publisher. The agent will also periodically monitor the metrics
+    that have been in progress for a while and attempt to republish them.
+    Because the agent is meant to run indefinitely, side by side with your
+    application, it should be configured and started in a separate, dedicated
+    process.
+
+    Internally this object just manages a :class:`~kadabra.agent.Receiver` and
+    :class:`~kadabra.agent.Nanny`.
 
     :type configuration: dict
     :param configuration: Dictionary of configuration to use in place of the
-    defaults.
+                          defaults.
     """
     def __init__(self, configuration=None):
         config = DEFAULT_CONFIG.copy()
@@ -73,46 +77,61 @@ class Agent(object):
         self.stopped = False
 
     def start(self):
-        """Start the agent. This will spawn :class:`ReceiverThread`s which
-        listen on the channel to receive and publish metrics. These threads
-        exist for the life of the process that starts the agent, and the agent
-        blocks on each thread; thus, you should call this method from a
-        dedicated Python process, as it will block until the process is killed
-        or a keyboard interrupt is detected."""
+        """Start the agent. It will receive metrics from the channel, publish
+        them, and attempt to republish metrics that have been pending for a
+        long time (in the case of publishing failures). The agent runs until
+        stopped; thus, you should call this method from a dedicated Python
+        process, as it will block until the process is killed, a keyboard
+        interrupt is detected, or the :meth:`~kadabra.Agent.stop` method is
+        called."""
         self.logger.info("Starting agent...")
         self.receiver.start()
         self.nanny.start()
 
         try:
-            while not self.is_stopped():
+            while not self._is_stopped():
                 time.sleep(10)
         except KeyboardInterrupt:
             self.stop()
 
-    def is_stopped(self):
-        return self.stopped
-
     def stop(self, *args, **kwargs):
-        """Stop the Agent gracefully by letting all :class:`ReceiverThread`s
-        and :class:`NannyThread`s finish processing."""
+        """Stop the Agent gracefully, ensuring that any pending publish
+        attempts are finished. This method accepts arbitrary arguments so that
+        it can be called from any context (such as a signal handler)."""
         self.logger.info("Gracefully stopping the agent... "
                          "This may take up to 10 seconds.")
         self.stopped = True
         self.nanny.stop()
         self.receiver.stop()
 
-class Receiver(object):
-    """Manages :class:`ReceiverThread`s which receive metrics from the channel,
-    moving them from the queue to in-progress, and attempt to publish them.
-    Publishing failures will result in the metrics remaining in-progress and
-    getting picked up by the :class:`Nanny` which will attempt to republish
-    them.
+    def _is_stopped(self):
+        """Determines if the agent has been stopped. This is used internally to
+        run the Agent continuously until stopped.
 
+        :rtype: bool
+        :returns: True if the Agent has been stopped, False otherwise.
+        """
+        return self.stopped
+
+class Receiver(object):
+    """Manages :class:`~kadabra.agent.ReceiverThread`\s which receive metrics
+    from the channel, move them from the queue to in-progress, and attempt to
+    publish them. Publishing failures will result in the metrics remaining
+    in-progress and getting picked up by the :class:`~kadabra.agent.Nanny`
+    which will attempt to republish them.
+
+    :type channel: :ref:`api-channels`
     :param channel: The channel to read metrics from. See
-    :module:`kadabra.channels`
-    :param publisher: The publisher to use for publishing metrics to a backing
-    store. See :module:`kadabra.publishers`.
-    :param logger: The logger which :class:`ReceiverThread`s will use.
+                    :ref:`api-channels`.
+
+    :type publisher: :ref:`api-publishers`
+    :param publisher: The publisher to use for publishing metrics. See
+                      :ref:`api-publishers`.
+
+    :type logger: ~logging.Logger
+    :param logger: The logger to use.
+
+    :type num_threads: integer
     :param num_threads: The number of threads to use for publishing metrics.
     """
     def __init__(self, channel, publisher, logger, num_threads):
@@ -130,23 +149,32 @@ class Receiver(object):
             self.threads.append(receiver_thread)
 
     def start(self):
-        """Start the receiver by starting up each :class:`ReceiverThread`."""
+        """Start the receiver by starting up each
+        :class:`~kadabra.agent.ReceiverThread`."""
         for thread in self.threads:
             self.logger.info("Starting %s" % thread.name)
             thread.start()
 
     def stop(self):
+        """Stop the receiver by stopping each
+        :class:`~kadabra.agent.ReceiverThread`."""
         self.logger.info("Stopping Receiver...")
         for thread in self.threads:
             thread.stop()
 
 class ReceiverThread(threading.Thread):
-    """Listens to a channel for metrics, and publishes them.
+    """Listens to a channel for metrics and publishes them.
 
-    :param channel: The channel to read metrics from. See :module:`channels`.
-    :param publisher: The publisher to use for publishing metrics to a backing
-    store. See :module:`publishers`.
-    :param logger: The :class:`Logger` to log messages to.
+    :type channel: :ref:`api-channels`
+    :param channel: The channel to read metrics from. See
+                    :ref:`api-channels`.
+
+    :type publisher: :ref:`api-publishers`
+    :param publisher: The publisher to use for publishing metrics. See
+                      :ref:`api-publishers`.
+
+    :type logger: ~logging.Logger
+    :param logger: The logger to use.
     """
     def __init__(self, channel, publisher, logger):
         super(ReceiverThread, self).__init__()
@@ -157,20 +185,19 @@ class ReceiverThread(threading.Thread):
         self.stopped = False
 
     def stop(self):
+        """Stops this this thread, ensuring that the current run will be the
+        last one."""
         self.logger.info("Stopping %s..." % self.name)
         self.stopped = True
 
-    def is_stopped(self):
-        return self.stopped
-
     def run(self):
-        """Run this object until stopped."""
-        while not self.is_stopped():
-            self.run_once()
+        """Run this thread until stopped."""
+        while not self._is_stopped():
+            self._run_once()
         self.logger.info("Stopped %s." % self.name)
 
-    def run_once(self):
-        """Runs this object once. It will receive a message from the channel
+    def _run_once(self):
+        """Runs this thread once. It will receive a message from the channel
         containing the metrics, publish them using the publisher, and mark the
         metrics as complete in the channel."""
         try:
@@ -184,6 +211,15 @@ class ReceiverThread(threading.Thread):
             self.logger.warn("Receiver thread encountered exception",\
                     exc_info=1)
 
+    def _is_stopped(self):
+        """Determines if this thread has been stopped. This is used internally
+        to run the thread continuously until stopped.
+
+        :rtype: bool
+        :returns: True if the thread has been stopped, False otherwise.
+        """
+        return self.stopped
+
 class Nanny(object):
     """Monitors metrics that have been in-progress for a long time and attemps
     to republish them. This object will periodically query objects in the
@@ -191,23 +227,37 @@ class Nanny(object):
     when they were serialized is greater than a threshold (indicating the first
     attempt to publish the metrics failed). It will grab the first X elements
     from the in-progress queue (where X is a configured value) and add them to
-    a queue, which :class:`NannyThread`s will read from and attempt to
-    republish. If metrics are successfully published they will be marked as
-    complete.
+    a queue, which :class:`~kadabra.agent.NannyThread`\s will read from and
+    attempt to republish. If metrics are successfully published they will be
+    marked as complete.
 
+    :type channel: :ref:`api-channels`
     :param channel: The channel to monitor.
+
+    :type publisher: :ref:`api-publishers`
     :param publisher: The publisher to use for republishing metrics.
-    :param logger: The logger which :class:`NannyThread`s will use.
+
+    :type logger: ~logging.Logger
+    :param logger: The logger to use.
+
+    :type frequency_seconds: integer
     :param frequency_seconds: How often the Nanny should query the in_progress
-    queue.
+                              queue.
+
+    :type threshold_seconds: integer
     :param threshold_seconds: The threshold seconds to determine if metrics
-    should be attempted to be republished.
+                              should be attempted to be republished.
+
+    :type query_limit: integer
     :param query_limit: The maximum number of elements to query from the
-    in-progress queue for any given Nanny run. This is necessary because the
-    in-progress queue will constantly be changing. Thus nanny needs to take a
-    "snapshot" rather than iterate through the queue.
-    :param num_threads: The number of :class:`NannyThread`s to use for
-    republishing.
+                        in-progress queue for any given Nanny run. This is
+                        necessary because the in-progress queue will constantly
+                        be changing. Thus nanny needs to take a "snapshot"
+                        rather than iterate through the queue.
+
+    :type num_threads: integer
+    :param num_threads: The number of :class:`~kadabra.agent.NannyThread`\s to
+                        use for republishing.
     """
     def __init__(self, channel, publisher, logger, frequency_seconds,
             threshold_seconds, query_limit, num_threads):
@@ -224,6 +274,8 @@ class Nanny(object):
         self.timer = None
 
     def start(self):
+        """Start the nanny by starting up each
+        :class:`~kadabra.agent.NannyThread`."""
         self.threads = []
         for i in range(self.num_threads):
             name = "KadabraNannyThread-%s" % str(i)
@@ -233,19 +285,25 @@ class Nanny(object):
             self.threads.append(nanny_thread)
             nanny_thread.start()
 
-        timer = Timer(self.frequency_seconds, self.run_nanny)
+        timer = Timer(self.frequency_seconds, self._run_nanny)
         timer.name = "KadabraNanny"
         self.timer = timer
         timer.start()
 
     def stop(self):
+        """Stop the nanny by stopping the Nanny from listening to the channela
+        nd by stopping each :class:`~kadabra.agent.NannyThread`."""
         self.logger.info("Stopping Nanny...")
         if self.timer is not None:
             self.timer.cancel()
         for thread in self.threads:
             thread.stop()
 
-    def run_nanny(self):
+    def _run_nanny(self):
+        """Runs the nanny. It will check the channel's in-progress queue at the
+        configured frequency, and add any in-progress items to an internal
+        queue, which the :class:`~kadabra.agent.NannyThread`\s will listen to
+        and attempt to republish metrics from."""
         try:
             self.logger.debug("Running nanny")
             in_progress = self.channel.in_progress(self.query_limit)
@@ -276,7 +334,7 @@ class Nanny(object):
             self.logger.warn("Encountered exception trying to get "
                     "in-progress metrics", exc_info=1)
         finally:
-            timer = Timer(self.frequency_seconds, self.run_nanny)
+            timer = Timer(self.frequency_seconds, self._run_nanny)
             timer.name = "KadabraNanny"
             self.timer = timer
             timer.start()
@@ -286,11 +344,19 @@ class NannyThread(threading.Thread):
     time and attempts to republish them. If the publishing is successful,
     marks the metrics as complete.
 
+    :type channel: :ref:`api-channels`
     :param channel: The channel to mark the metrics as complete upon successful
-    publishing.
+                    publishing.
+
+    :type publisher: :ref:`api-publishers`
     :param publisher: The publisher to be used to publish the metrics object.
+
+    :type queue: ~Queue.Queue
     :param queue: The queue to monitor for metrics to republish.
-    :param logger: The :class:`Logger` to log messages to."""
+
+    :type logger: ~logging.Logger
+    :param logger: The :class:`Logger` to log messages to.
+    """
     def __init__(self, channel, publisher, queue, logger):
         super(NannyThread, self).__init__()
         self.channel = channel
@@ -301,21 +367,18 @@ class NannyThread(threading.Thread):
         self.stopped = False
 
     def stop(self):
-        """Stop this NannyThread from running."""
+        """Stops this this thread, ensuring that the current run will be the
+        last one."""
         self.logger.info("Stopping %s..." % self.name)
         self.stopped = True
 
-    def is_stopped(self):
-        """Whether or not this NannyThread has been stopped."""
-        return self.stopped
-
     def run(self):
-        """Run this object until stopped."""
-        while not self.is_stopped():
-            self.run_once()
+        """Run this thread until stopped."""
+        while not self._is_stopped():
+            self._run_once()
         self.logger.info("Stopped %s." % self.name)
 
-    def run_once(self):
+    def _run_once(self):
         """Listen to the queue for metrics to publish and attempt to publish
         them and mark them as complete."""
         try:
@@ -330,3 +393,12 @@ class NannyThread(threading.Thread):
         except:
             self.logger.warn("Nanny thread encountered exception",\
                     exc_info=1)
+
+    def _is_stopped(self):
+        """Determines if this thread has been stopped. This is used internally
+        to run the thread continuously until stopped.
+
+        :rtype: bool
+        :returns: True if the thread has been stopped, False otherwise.
+        """
+        return self.stopped

@@ -27,7 +27,7 @@ def test_run_once_no_metrics():
     channel.complete = MagicMock()
 
     nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
-    nanny_thread.run_once()
+    nanny_thread._run_once()
 
     queue.get.assert_called_with(timeout=10)
     publisher.publish.assert_has_calls([])
@@ -46,7 +46,7 @@ def test_run_once():
     channel.complete = MagicMock()
 
     nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
-    nanny_thread.run_once()
+    nanny_thread._run_once()
 
     queue.get.assert_called_with(timeout=10)
     publisher.publish.assert_called_with(metrics)
@@ -64,7 +64,7 @@ def test_run_once_empty_queue():
     channel.complete = MagicMock()
 
     nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
-    nanny_thread.run_once()
+    nanny_thread._run_once()
 
     queue.get.assert_called_with(timeout=10)
     publisher.publish.assert_has_calls([])
@@ -84,7 +84,7 @@ def test_run_once_exception():
     channel.complete = MagicMock()
 
     nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
-    nanny_thread.run_once()
+    nanny_thread._run_once()
 
     queue.get.assert_called_with(timeout=10)
     publisher.publish.assert_called_with(metrics)
@@ -109,9 +109,9 @@ def test_is_stopped():
     logger = MagicMock()
 
     nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
-    assert nanny_thread.is_stopped() == False
+    assert nanny_thread._is_stopped() == False
     nanny_thread.stopped = True
-    assert nanny_thread.is_stopped() == True
+    assert nanny_thread._is_stopped() == True
 
 def test_run():
     channel = MagicMock()
@@ -120,11 +120,11 @@ def test_run():
     logger = MagicMock()
 
     nanny_thread = kadabra.agent.NannyThread(channel, publisher, queue, logger)
-    nanny_thread.run_once = MagicMock()
-    nanny_thread.is_stopped = MagicMock()
-    nanny_thread.is_stopped.side_effect = [False, True]
+    nanny_thread._run_once = MagicMock()
+    nanny_thread._is_stopped = MagicMock()
+    nanny_thread._is_stopped.side_effect = [False, True]
 
     nanny_thread.run()
 
-    assert nanny_thread.is_stopped.call_count == 2
-    assert nanny_thread.run_once.call_count == 1
+    assert nanny_thread._is_stopped.call_count == 2
+    assert nanny_thread._run_once.call_count == 1

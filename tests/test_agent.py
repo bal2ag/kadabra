@@ -131,13 +131,13 @@ def test_start(mock_sleep, mock_nanny, mock_receiver, mock_redis_channel,
     mock_debug_publisher.DEFAULT_ARGS = publisher_default_args
 
     agent = kadabra.Agent()
-    agent.is_stopped = MagicMock()
-    agent.is_stopped.side_effect = [False, True]
+    agent._is_stopped = MagicMock()
+    agent._is_stopped.side_effect = [False, True]
     agent.start()
 
     agent.receiver.start.assert_called_with()
     agent.nanny.start.assert_called_with()
-    assert agent.is_stopped.call_count == 2
+    assert agent._is_stopped.call_count == 2
     mock_sleep.assert_has_calls([call(10)])
 
 @mock.patch('kadabra.agent.DebugPublisher')
@@ -170,14 +170,14 @@ def test_start(mock_sleep, mock_nanny, mock_receiver, mock_redis_channel,
     mock_debug_publisher.DEFAULT_ARGS = publisher_default_args
 
     agent = kadabra.Agent()
-    agent.is_stopped = MagicMock()
-    agent.is_stopped.return_value = False
+    agent._is_stopped = MagicMock()
+    agent._is_stopped.return_value = False
     agent.stop = MagicMock()
     agent.start()
 
     agent.receiver.start.assert_called_with()
     agent.nanny.start.assert_called_with()
-    assert agent.is_stopped.call_count == 1
+    assert agent._is_stopped.call_count == 1
     agent.stop.assert_called_with()
 
 @mock.patch('kadabra.agent.DebugPublisher')
@@ -208,7 +208,7 @@ def test_is_stopped(mock_sleep, mock_nanny, mock_receiver, mock_redis_channel,
     mock_debug_publisher.DEFAULT_ARGS = publisher_default_args
 
     agent = kadabra.Agent()
-    agent.is_stopped() == False
+    agent._is_stopped() == False
 
 @mock.patch('kadabra.agent.DebugPublisher')
 @mock.patch('kadabra.agent.RedisChannel')
@@ -240,8 +240,8 @@ def test_stop(mock_sleep, mock_nanny, mock_receiver, mock_redis_channel,
     mock_debug_publisher.DEFAULT_ARGS = publisher_default_args
 
     agent = kadabra.Agent()
-    assert agent.is_stopped() == False
+    assert agent._is_stopped() == False
     agent.stop()
-    assert agent.is_stopped() == True
+    assert agent._is_stopped() == True
     nanny.stop.assert_called_with()
     receiver.stop.assert_called_with()
