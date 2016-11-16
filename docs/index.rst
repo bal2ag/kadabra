@@ -24,8 +24,9 @@ Contents:
    installation
    overview
    gettingstarted
+   configuration
+   usingwithinfluxdb
    collecting
    sending
    publishing
-   configuration
    api

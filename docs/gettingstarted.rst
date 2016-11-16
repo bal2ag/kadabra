@@ -4,8 +4,8 @@ Getting Started
 ===============
 
 In this section we will demonstrate the basic functionality of Kadabra by
-publishing some metrics using the :class:`DebugPublisher`, which just outputs
-the metrics to a logger.
+publishing some metrics using the :class:`~kadabra.publishers.DebugPublisher`,
+which just outputs the metrics to a logger.
 
 Make sure you have installed Kadabra following the directions in the
 :doc:`installation` section.
@@ -90,13 +90,21 @@ Go over to the terminal where your agent is running. You should see the metrics
 output as serialized JSON. Lastly, hit CTRL+C to gracefully shut down the
 agent.
 
-Next Steps
-----------
+Configuration
+-------------
 
-The :class:`DebugPublisher` just serializes the metrics into JSON and outputs
-them to a logger. You could pipe this output into another program which writes
-the metrics into more permanant storage. But it would be best to publish the
-metrics directly into a database that is designed for metrics.
+You can configure the Client and the Agent using a dictionary when you
+instantiate them to control various aspects of their functionality. For more
+information see the :doc:`configuration` section.
+
+Publishing to Storage
+---------------------
+
+The :class:`~kadabra.publishers.DebugPublisher` just serializes the metrics
+into JSON and outputs them to a logger. You could pipe this output into another
+program which writes the metrics into more permanant storage. But it would be
+best to publish the metrics directly into a database that is designed for
+metrics.
 `Time-series databases <https://en.wikipedia.org/wiki/Time_series_database>`_
 are ideal for storing metrics data.
 
@@ -104,5 +112,16 @@ One such database engine is
 `InfluxDB <https://www.influxdata.com/time-series-platform/influxdb/>`_, which
 is capable of storing metrics with indexed tags and provides mechanisms for
 querying those metrics in useful ways. Kadabra ships with an
-:class:`InfluxDBPublisher` that can publish metrics straight to an InfluxDB
-server - you just provide the host, port, and database name.
+:class:`~kadabra.publishers.InfluxDBPublisher` that can publish metrics
+straight to an InfluxDB server - you just provide the host, port, and database
+name.
+
+For a guide on how to set up Kadabra to publish metrics using InfluxDB, see
+:doc:`usingwithinfluxdb`.
+
+Learning More
+-------------
+
+You now have everything you need to use Kadabra in your application. You can
+find out more about :doc:`collecting`, :doc:`sending`, and :doc:`publishing` in
+the corresponding sections. For a complete look at the API, see :doc:`api`.
