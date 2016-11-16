@@ -93,6 +93,9 @@ The way metadata is ultimately handled depends on the publisher. For example,
 the :class:`~kadabra.publishers.InfluxDBPublisher` will transform the metadata
 into fields for each measurement.
 
+.. note:: Don't use `value` or `unit` for metadata keys; these are reserved and
+          will be overwritten.
+
 Timestamps
 ----------
 
