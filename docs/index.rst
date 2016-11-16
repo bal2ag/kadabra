@@ -25,8 +25,9 @@ Contents:
    overview
    gettingstarted
    configuration
-   usingwithinfluxdb
    collecting
    sending
    publishing
+   usingwithinfluxdb
+   runninginprod
    api
