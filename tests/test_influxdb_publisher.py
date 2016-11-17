@@ -85,20 +85,22 @@ def test_publish(mock_influxdb):
 
     timerOne = MagicMock()
     timerOne.name = "timerOne"
-    timerOne.value = 100;
+    timerOne.value = datetime.timedelta(seconds=10);
     timerOne.timestamp = datetime.datetime.utcnow()
     timerOne.metadata = {"timerOneMdName": "timerOneMdValue"}
     timerOne.unit = MagicMock()
     timerOne.unit.name = "timerOneUnit"
+    timerOne.unit.seconds_offset = 10
 
     timerTwo = MagicMock()
     timerTwo.name = "timerTwo"
-    timerTwo.value = 200;
+    timerTwo.value = datetime.timedelta(seconds=20)
     timerTwo.timestamp = datetime.datetime.utcnow() +\
             datetime.timedelta(seconds=5)
     timerTwo.metadata = {"timerTwoMdName": "timerTwoMdValue"}
     timerTwo.unit = MagicMock()
     timerTwo.unit.name = "timerTwoUnit"
+    timerTwo.unit.seconds_offset = 20
 
     counterOne = MagicMock()
     counterOne.name = "counterOne"
@@ -127,7 +129,9 @@ def test_publish(mock_influxdb):
             "tags": tags,
             "time": datetime.datetime.strftime(timerOne.timestamp,
                 timestamp_format),
-            "fields": merge_dicts(timerOne.metadata, {"value": timerOne.value,
+            "fields": merge_dicts(timerOne.metadata, {\
+                "value": timerOne.value.total_seconds() *\
+                timerOne.unit.seconds_offset,
                 "unit": timerOne.unit.name})
         },
         {
@@ -135,7 +139,9 @@ def test_publish(mock_influxdb):
             "tags": tags,
             "time": datetime.datetime.strftime(timerTwo.timestamp,
                 timestamp_format),
-            "fields": merge_dicts(timerTwo.metadata, {"value": timerTwo.value,
+            "fields": merge_dicts(timerTwo.metadata, {\
+                "value": timerTwo.value.total_seconds() *\
+                timerTwo.unit.seconds_offset,
                 "unit": timerTwo.unit.name})
         },
         {

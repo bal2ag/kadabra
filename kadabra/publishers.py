@@ -76,7 +76,8 @@ class InfluxDBPublisher(object):
 
         for timer in metrics.timers:
             fields = {k: v for k,v in timer.metadata.iteritems()}
-            fields["value"] = timer.value
+            fields["value"] = timer.value.total_seconds() *\
+                    timer.unit.seconds_offset
             fields["unit"] = timer.unit.name
             datum = {
                 "measurement": timer.name,
