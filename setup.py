@@ -19,7 +19,7 @@ with open('kadabra/__init__.py', 'rb') as f:
 setup(
     name='Kadabra',
     version=version,
-    url='http://github.com/ToozlyLLC/kadabra/',
+    url='http://github.com/bal2ag/kadabra/',
     license='BSD',
     author='Alex Landau',
     author_email='toozlyllc@gmail.com',
@@ -28,8 +28,8 @@ setup(
     packages=['kadabra'],
     include_package_data=True,
     zip_safe=False,
-    platforms='any',
     install_requires=[
+        'influxdb>=3.0.0',
         'redis>=2.10',
     ],
     classifiers=[
@@ -37,9 +37,8 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Topic :: Software Development :: Libraries',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ]
 )
