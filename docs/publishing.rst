@@ -72,7 +72,7 @@ The configuration values for this publisher are:
 - **port**: The port of the InfluxDB server. (Defaults to `8086`)
 - **database**: The name of the InfluxDB database to use. Make sure you create
   this database on the server before you start sending metrics to it! (Defaults
-  to `kadabra_db`)
+  to `kadabra`)
 - **timeout**: The timeout in seconds to wait for the InfluxDB server to respond
   before failing to publish. (Defaults to `5`)
 
