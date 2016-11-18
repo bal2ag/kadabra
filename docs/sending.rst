@@ -67,9 +67,9 @@ simple to set up, and provides great performance. The configuration values are:
   (Defaults to `localhost`)
 - **port**: The port of the Redis server. (Defaults to `6379`)
 - **db**: The database on the Redis server to store the metrics before they are
-          published. I highly recommend using a dedicated database for Kadabra
-          to prevent collision with your application keys (if your application
-          uses Redis).
+  published. I highly recommend using a dedicated database for Kadabra to
+  prevent collision with your application keys (if your application uses
+  Redis).
 
 You can overwrite any or none of these values in the ``CLIENT_CHANNEL_ARGS``
 and ``AGENT_CHANNEL_ARGS`` configuration keys. For more information on how to
