@@ -62,7 +62,7 @@ metrics and publish them. First, let's initialize the Kadabra client::
     >>> import kadabra
     >>> client = kadabra.Client()
 
-Now let's get a :class:`kadabra.client.Collector` object from our client. This
+Now let's get a :class:`~kadabra.client.Collector` object from our client. This
 is the API we use to record metrics in our application. It is thread-safe and
 can be shared throughout our application::
 
@@ -71,7 +71,7 @@ can be shared throughout our application::
 In a real application, the metrics code would be located in places where we
 care about recording important information, such as customer sales, user
 signups, or application failures. But since we are just demonstrating
-functionality, let's record a few counters and a timer::
+basic functionality, let's record a few counters and a timer::
 
     >>> import datetime
     >>> metrics.add_count("myCount", 1.0)
