@@ -23,16 +23,16 @@ questions about your service. And it shouldn't cost a fortune. There are plenty
 of metrics services out there, but they `cost
 <https://newrelic.com/calculator>`_ a `lot
 <https://azure.microsoft.com/en-us/pricing/details/application-insights/>`_ of
-`money <https://aws.amazon.com/cloudwatch/pricing/>`_ and somtimes require some
-sort of contractual commitment. And they usually give you more than you really
-need.
+`money <https://aws.amazon.com/cloudwatch/pricing/>`_ and sometimes even
+require some sort of contractual commitment. And they usually give you more
+than you really need.
 
 Kadabra provides a simple API to instrument your application code to record
 metrics and a performant, reliable agent to publish your metrics into a
-database. It is cost-effective, scales with your application, unit-tested,
-and best of all, runs `completely on open-source software.`
+database. It is cost-effective, scales with your application, is fully
+unit-tested, and best of all, it runs *completely on open-source software.*
 
-If you're willing to put in a bit of work, you can save money and headache and
+If you're willing to put in a bit of work, you can save a lot of money and
 maintain control of your application infrastructure.
 
 Installation
@@ -63,6 +63,6 @@ into a database!
 Docs
 ----
 
-The `documentation <http://kadabra.readthedocs.io/>`_ contains complete
-instructions to get up and running with Kadabra, including usage guides and the
-fully-documented API.
+The `documentation <http://kadabra.readthedocs.io/en/latest/overview.html>`_
+contains complete instructions to get up and running with Kadabra, including
+usage guides and the fully-documented API.
