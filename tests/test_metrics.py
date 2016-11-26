@@ -95,7 +95,8 @@ def test_timer(mock_deserialize):
         "metadata": metadata,
         "timestamp": timestamp.strftime(timestamp_format),
         "unit": "unit",
-        "value": value.total_seconds() * unit_seconds_offset
+        "value": kadabra.utils.timedelta_total_seconds(value) *\
+                unit_seconds_offset
     }
 
     timer = kadabra.Timer(name, timestamp, metadata, value, unit)

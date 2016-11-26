@@ -1,3 +1,5 @@
+from .utils import timedelta_total_seconds
+
 import sys, json, datetime
 
 class DebugPublisher(object):
@@ -72,11 +74,11 @@ class InfluxDBPublisher(object):
         :param metrics: The metrics to publish.
         """
         data = []
-        tags = {d.name: d.value for d in metrics.dimensions}
+        tags = dict([(d.name, d.value) for d in metrics.dimensions])
 
         for timer in metrics.timers:
-            fields = {k: v for k,v in timer.metadata.iteritems()}
-            fields["value"] = timer.value.total_seconds() *\
+            fields = dict([(k, v) for k,v in timer.metadata.iteritems()])
+            fields["value"] = timedelta_total_seconds(timer.value) *\
                     timer.unit.seconds_offset
             fields["unit"] = timer.unit.name
             datum = {
@@ -89,7 +91,7 @@ class InfluxDBPublisher(object):
             data.append(datum)
 
         for counter in metrics.counters:
-            fields = {k: v for k,v in counter.metadata.iteritems()}
+            fields = dict([(k, v) for k,v in counter.metadata.iteritems()])
             fields["value"] = counter.value
             datum = {
                 "measurement": counter.name,

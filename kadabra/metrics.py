@@ -1,3 +1,5 @@
+from .utils import timedelta_total_seconds
+
 import datetime
 
 class Dimension(object):
@@ -153,7 +155,8 @@ class Timer(Metric):
             'unit': self.unit.serialize(),
             'metadata': self.metadata,
             'timestamp': self.timestamp.strftime(timestamp_format),
-            'value': self.value.total_seconds() * self.unit.seconds_offset
+            'value': timedelta_total_seconds(self.value) *\
+                    self.unit.seconds_offset
         }
 
     @staticmethod

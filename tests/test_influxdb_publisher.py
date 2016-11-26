@@ -130,8 +130,8 @@ def test_publish(mock_influxdb):
             "time": datetime.datetime.strftime(timerOne.timestamp,
                 timestamp_format),
             "fields": merge_dicts(timerOne.metadata, {\
-                "value": timerOne.value.total_seconds() *\
-                timerOne.unit.seconds_offset,
+                "value": kadabra.utils.timedelta_total_seconds(timerOne.value)\
+                 * timerOne.unit.seconds_offset,
                 "unit": timerOne.unit.name})
         },
         {
@@ -140,8 +140,8 @@ def test_publish(mock_influxdb):
             "time": datetime.datetime.strftime(timerTwo.timestamp,
                 timestamp_format),
             "fields": merge_dicts(timerTwo.metadata, {\
-                "value": timerTwo.value.total_seconds() *\
-                timerTwo.unit.seconds_offset,
+                "value": kadabra.utils.timedelta_total_seconds(timerTwo.value)\
+                * timerTwo.unit.seconds_offset,
                 "unit": timerTwo.unit.name})
         },
         {

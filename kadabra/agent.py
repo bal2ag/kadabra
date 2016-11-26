@@ -4,6 +4,7 @@ from threading import Timer
 
 from .channels import RedisChannel
 from .publishers import DebugPublisher, InfluxDBPublisher
+from .utils import timedelta_total_seconds
 
 from .config import DEFAULT_CONFIG
 
@@ -318,7 +319,7 @@ class Nanny(object):
                     serialized_at =\
                             datetime.datetime.strptime(metrics.serialized_at,
                                     metrics.timestamp_format)
-                    delta = (now - serialized_at).total_seconds()
+                    delta = timedelta_total_seconds(now - serialized_at)
                     self.logger.debug(\
                             "serialized_at: %s, now: %s, delta: %s" %\
                         (str(metrics.serialized_at), str(now), delta))
