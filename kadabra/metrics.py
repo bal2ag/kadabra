@@ -1,4 +1,4 @@
-from .utils import timedelta_total_seconds
+from .utils import get_now, timedelta_total_seconds
 
 import datetime
 
@@ -272,7 +272,7 @@ class Metrics(object):
             "timers": [t.serialize(self.timestamp_format)\
                     for t in self.timers],
             "timestamp_format": self.timestamp_format,
-            "serialized_at":  datetime.datetime.utcnow().strftime(\
+            "serialized_at":  get_now().strftime(\
                     self.timestamp_format) if self.serialized_at is None\
                     else self.serialized_at
         }

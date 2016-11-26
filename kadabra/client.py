@@ -1,8 +1,9 @@
 import datetime, threading, json
 
 from .channels import RedisChannel
-from .metrics import Dimension, Counter, Timer, Metrics
 from .config import DEFAULT_CONFIG
+from .metrics import Dimension, Counter, Timer, Metrics
+from .utils import get_now
 
 class Client(object):
     """Main client API for Kadabra. In conjunction with the
@@ -175,7 +176,7 @@ class Collector(object):
                 raise CollectorClosedError()
 
             if timestamp is None:
-                timestamp = datetime.datetime.utcnow()
+                timestamp = get_now()
             
             md = metadata if metadata else {}
             if name not in self.counters:
@@ -232,7 +233,7 @@ class Collector(object):
                 raise CollectorClosedError()
 
             if timestamp is None:
-                timestamp = datetime.datetime.utcnow()
+                timestamp = get_now()
             md = metadata if metadata else {}
 
             if name not in self.timers:

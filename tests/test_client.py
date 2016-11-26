@@ -6,15 +6,6 @@ from mock import MagicMock, mock, call
 
 NOW = datetime.datetime.utcnow()
 
-class MockDatetime(datetime.datetime):
-    "A fake replacement for date that can be mocked for testing."
-    def __new__(cls, *args, **kwargs):
-        return datetime.datetime.__new__(datetime.datetime, *args, **kwargs)
-
-    @classmethod
-    def utcnow(cls):
-        return NOW
-
 def test_client_ctor_unrecognized_channel():
     with pytest.raises(Exception):
         kadabra.Client(configuration={"CLIENT_CHANNEL_TYPE": "grenjiweroni"})
@@ -202,8 +193,8 @@ def test_collector_set_dimension_override():
     assert len(collector.lock.release.mock_calls) == 1
     assert collector.dimensions[dimension_name] == dimension_value
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
-def test_collector_add_count():
+@mock.patch('kadabra.client.get_now', return_value=NOW)
+def test_collector_add_count(mock_get_now):
     count_name = "name"
     count_value = 1.0
     timestamp_format = "timestamp_format"
@@ -219,8 +210,8 @@ def test_collector_add_count():
     assert collector.counters[count_name]["metadata"] == {}
     assert collector.counters[count_name]["timestamp"] == NOW
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
-def test_collector_add_count_timestamp():
+@mock.patch('kadabra.client.get_now', return_value=NOW)
+def test_collector_add_count_timestamp(mock_get_now):
     count_name = "name"
     count_value = 1.0
     timestamp_format = "timestamp_format"
@@ -237,8 +228,8 @@ def test_collector_add_count_timestamp():
     assert collector.counters[count_name]["metadata"] == {}
     assert collector.counters[count_name]["timestamp"] == timestamp
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
-def test_collector_add_count_metadata():
+@mock.patch('kadabra.client.get_now', return_value=NOW)
+def test_collector_add_count_metadata(mock_get_now):
     count_name = "name"
     count_value = 1.0
     count_metadata = {"name": "value"}
@@ -255,8 +246,8 @@ def test_collector_add_count_metadata():
     assert collector.counters[count_name]["metadata"] == count_metadata
     assert collector.counters[count_name]["timestamp"] == NOW
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
-def test_collector_add_count_existing():
+@mock.patch('kadabra.client.get_now', return_value=NOW)
+def test_collector_add_count_existing(mock_get_now):
     count_name = "name"
     count_value = 1.0
     timestamp_format = "timestamp_format"
@@ -273,8 +264,8 @@ def test_collector_add_count_existing():
     assert collector.counters[count_name]["metadata"] == {}
     assert collector.counters[count_name]["timestamp"] == NOW
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
-def test_collector_add_count_existing_replace_metadata():
+@mock.patch('kadabra.client.get_now', return_value=NOW)
+def test_collector_add_count_existing_replace_metadata(mock_get_now):
     count_name = "name"
     count_value = 1.0
     count_metadata = {"name": "value"}
@@ -296,8 +287,8 @@ def test_collector_add_count_existing_replace_metadata():
         count_metadata_replacement
     assert collector.counters[count_name]["timestamp"] == NOW
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
-def test_collector_add_count_existing_replace_timestamp():
+@mock.patch('kadabra.client.get_now', return_value=NOW)
+def test_collector_add_count_existing_replace_timestamp(mock_get_now):
     count_name = "name"
     count_value = 1.0
     count_metadata = {"name": "value"}
@@ -317,9 +308,8 @@ def test_collector_add_count_existing_replace_timestamp():
     assert collector.counters[count_name]["metadata"] == {}
     assert collector.counters[count_name]["timestamp"] == timestamp
 
-
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
-def test_collector_set_timer():
+@mock.patch('kadabra.client.get_now', return_value=NOW)
+def test_collector_set_timer(mock_get_now):
     timer_name = "name"
     timer_value = datetime.timedelta(seconds=10)
     unit = kadabra.Units.MILLISECONDS
@@ -337,7 +327,6 @@ def test_collector_set_timer():
     assert collector.timers[timer_name]["metadata"] == {}
     assert collector.timers[timer_name]["timestamp"] == NOW
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
 def test_collector_set_timer_timestamp():
     timer_name = "name"
     timer_value = datetime.timedelta(seconds=10)
@@ -357,8 +346,8 @@ def test_collector_set_timer_timestamp():
     assert collector.timers[timer_name]["metadata"] == {}
     assert collector.timers[timer_name]["timestamp"] == timestamp
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
-def test_collector_set_timer_metadata():
+@mock.patch('kadabra.client.get_now', return_value=NOW)
+def test_collector_set_timer_metadata(mock_get_now):
     timer_name = "name"
     timer_value = datetime.timedelta(seconds=10)
     unit = kadabra.Units.MILLISECONDS
@@ -377,7 +366,6 @@ def test_collector_set_timer_metadata():
     assert collector.timers[timer_name]["metadata"] == metadata
     assert collector.timers[timer_name]["timestamp"] == NOW
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
 def test_collector_set_timer_existing():
     timer_name = "name"
     timer_value = datetime.timedelta(seconds=10)
@@ -401,7 +389,6 @@ def test_collector_set_timer_existing():
     assert collector.timers[timer_name]["metadata"] == {}
     assert collector.timers[timer_name]["timestamp"] == timestamp
 
-@mock.patch('kadabra.client.datetime.datetime', MockDatetime)
 def test_collector_set_timer_existing_replace_metadata():
     timer_name = "name"
     timer_value = datetime.timedelta(seconds=10)

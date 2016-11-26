@@ -6,19 +6,6 @@ from mock import MagicMock, mock, call
 NOW = datetime.datetime.utcnow()
 STRPTIME = NOW - datetime.timedelta(seconds=30)
 
-class MockDatetime(datetime.datetime):
-    "A fake replacement for date that can be mocked for testing."
-    def __new__(cls, *args, **kwargs):
-        return datetime.datetime.__new__(datetime.datetime, *args, **kwargs)
-
-    @classmethod
-    def utcnow(cls):
-        return NOW
-
-    @classmethod
-    def strptime(cls, timestamp, fmt):
-        return STRPTIME
-
 def test_ctor():
     channel = MagicMock()
     publisher = MagicMock()
@@ -73,9 +60,10 @@ def test_start(mock_timer, mock_nanny_thread):
         assert nanny.threads[i].name == expected_name
         nanny_threads[i].start.assert_called_with()
 
-@mock.patch('kadabra.agent.datetime.datetime', MockDatetime)
+@mock.patch('kadabra.agent.get_datetime_from_timestamp_string',\
+        return_value=STRPTIME)
 @mock.patch('kadabra.agent.Timer')
-def test_run_nanny(mock_timer):
+def test_run_nanny(mock_timer, mock_get_datetime_from_timestamp_string):
     metrics_one = MagicMock()
     timestamp_format = "%Y-%m-%dT%H:%M:%SZ"
     metrics_one.serialized_at = STRPTIME.strftime(timestamp_format)
