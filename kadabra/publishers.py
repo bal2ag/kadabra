@@ -77,7 +77,7 @@ class InfluxDBPublisher(object):
         tags = dict([(d.name, d.value) for d in metrics.dimensions])
 
         for timer in metrics.timers:
-            fields = dict([(k, v) for k,v in timer.metadata.iteritems()])
+            fields = dict([(k, v) for k,v in timer.metadata.items()])
             fields["value"] = timedelta_total_seconds(timer.value) *\
                     timer.unit.seconds_offset
             fields["unit"] = timer.unit.name
@@ -91,7 +91,7 @@ class InfluxDBPublisher(object):
             data.append(datum)
 
         for counter in metrics.counters:
-            fields = dict([(k, v) for k,v in counter.metadata.iteritems()])
+            fields = dict([(k, v) for k,v in counter.metadata.items()])
             fields["value"] = counter.value
             datum = {
                 "measurement": counter.name,

@@ -1,4 +1,9 @@
-import threading, logging, datetime, json, Queue, time
+import threading, logging, datetime, json, time, sys
+
+if (sys.version_info > (3, 0)):
+    from queue import Queue, Empty
+else:
+    from Queue import Queue, Empty
 
 from threading import Timer
 
@@ -43,7 +48,7 @@ class Agent(object):
 
         channel_args = channel_type.DEFAULT_ARGS.copy()
         if custom_channel_args:
-            for k,v in custom_channel_args.iteritems():
+            for k,v in custom_channel_args.items():
                 channel_args[k] = v
         channel = channel_type(**channel_args)
 
@@ -59,7 +64,7 @@ class Agent(object):
 
         publisher_args = publisher_type.DEFAULT_ARGS.copy()
         if custom_publisher_args:
-            for k,v in custom_publisher_args.iteritems():
+            for k,v in custom_publisher_args.items():
                 publisher_args[k] = v
         publisher = publisher_type(**publisher_args)
 
@@ -91,7 +96,7 @@ class Agent(object):
         self.nanny.start()
 
         try:
-            while not self._is_stopped():
+            while not self._check_stopped():
                 time.sleep(10)
         except KeyboardInterrupt:
             self.stop()
@@ -106,7 +111,7 @@ class Agent(object):
         self.nanny.stop()
         self.receiver.stop()
 
-    def _is_stopped(self):
+    def _check_stopped(self):
         """Determines if the agent has been stopped. This is used internally to
         run the Agent continuously until stopped.
 
@@ -194,7 +199,7 @@ class ReceiverThread(threading.Thread):
 
     def run(self):
         """Run this thread until stopped."""
-        while not self._is_stopped():
+        while not self._check_stopped():
             self._run_once()
         self.logger.info("Stopped %s." % self.name)
 
@@ -213,7 +218,7 @@ class ReceiverThread(threading.Thread):
             self.logger.warn("Receiver thread encountered exception",\
                     exc_info=1)
 
-    def _is_stopped(self):
+    def _check_stopped(self):
         """Determines if this thread has been stopped. This is used internally
         to run the thread continuously until stopped.
 
@@ -271,7 +276,7 @@ class Nanny(object):
         self.query_limit = query_limit
         self.num_threads = num_threads
 
-        self.queue = Queue.Queue()
+        self.queue = Queue()
         self.threads = []
         self.timer = None
 
@@ -352,7 +357,7 @@ class NannyThread(threading.Thread):
     :type publisher: :ref:`api-publishers`
     :param publisher: The publisher to be used to publish the metrics object.
 
-    :type queue: ~Queue.Queue
+    :type queue: Queue
     :param queue: The queue to monitor for metrics to republish.
 
     :type logger: ~logging.Logger
@@ -375,7 +380,7 @@ class NannyThread(threading.Thread):
 
     def run(self):
         """Run this thread until stopped."""
-        while not self._is_stopped():
+        while not self._check_stopped():
             self._run_once()
         self.logger.info("Stopped %s." % self.name)
 
@@ -389,13 +394,13 @@ class NannyThread(threading.Thread):
                         metrics.serialize())
                 self.publisher.publish(metrics)
                 self.channel.complete(metrics)
-        except Queue.Empty:
+        except Empty:
             pass
         except:
             self.logger.warn("Nanny thread encountered exception",\
                     exc_info=1)
 
-    def _is_stopped(self):
+    def _check_stopped(self):
         """Determines if this thread has been stopped. This is used internally
         to run the thread continuously until stopped.
 

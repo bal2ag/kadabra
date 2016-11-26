@@ -1,6 +1,6 @@
 from .metrics import Metrics
 
-import logging, json, base64
+import logging, json
 
 class RedisChannel(object):
     """A channel for transporting metrics using Redis.
@@ -48,8 +48,7 @@ class RedisChannel(object):
         """
         to_push = metrics.serialize()
         self.logger.debug("Sending %s" % to_push)
-        self.client.lpush(self.queue_key,\
-                base64.b64encode(json.dumps(to_push)))
+        self.client.lpush(self.queue_key, json.dumps(to_push))
         self.logger.debug("Successfully sent %s" % to_push)
 
     def receive(self):
@@ -68,7 +67,7 @@ class RedisChannel(object):
         raw = self.client.brpoplpush(self.queue_key, self.inprogress_key,
                 timeout=10)
         if raw:
-            rv = json.loads(base64.b64decode(raw))
+            rv = json.loads(raw)
             self.logger.debug("Got metrics: %s" % rv)
             return Metrics.deserialize(rv)
         self.logger.debug("No metrics received")
@@ -83,8 +82,7 @@ class RedisChannel(object):
         """
         to_complete = metrics.serialize()
         self.logger.debug("Marking %s as complete" % str(to_complete))
-        rv = self.client.lrem(self.inprogress_key, 1,\
-                base64.b64encode(json.dumps(to_complete)))
+        rv = self.client.lrem(self.inprogress_key, 1, json.dumps(to_complete))
         if rv > 0:
             self.logger.debug("Successfully marked %s as complete" %\
                     str(to_complete))
@@ -105,6 +103,6 @@ class RedisChannel(object):
         in_progress = self.client.lrange(self.inprogress_key, 0,\
                 query_limit - 1)
         self.logger.debug("Found %s in progress metrics" % len(in_progress))
-        return [Metrics.deserialize(json.loads(base64.b64decode(m)))\
+        return [Metrics.deserialize(json.loads(m))\
                 for m in in_progress]
 

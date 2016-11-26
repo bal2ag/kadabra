@@ -44,7 +44,7 @@ class Client(object):
 
         channel_args = channel_type.DEFAULT_ARGS.copy()
         if custom_channel_args:
-            for k,v in custom_channel_args.iteritems():
+            for k,v in custom_channel_args.items():
                 channel_args[k] = v
 
         self.channel = channel_type(**channel_args)
@@ -271,11 +271,11 @@ class Collector(object):
             self.closed = True
 
             dimensions = [Dimension(n, v)\
-                    for n,v in self.dimensions.iteritems()]
+                    for n,v in self.dimensions.items()]
             counters = [Counter(n, c["timestamp"], c["metadata"], c["value"])\
-                    for n,c in self.counters.iteritems()]
+                    for n,c in self.counters.items()]
             timers = [Timer(n, t["timestamp"], t["metadata"], t["value"],\
-                    t["unit"]) for n,t in self.timers.iteritems()]
+                    t["unit"]) for n,t in self.timers.items()]
             return Metrics(dimensions, counters, timers, self.timestamp_format)
         finally:
             self.lock.release()

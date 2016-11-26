@@ -1,6 +1,6 @@
 import redis
 import kadabra
-import base64, json
+import json
 
 from mock import MagicMock, mock
 
@@ -40,16 +40,14 @@ def test_send():
     channel.send(metrics)
 
     metrics.serialize.assert_called_with()
-    channel.client.lpush.assert_called_with(queue_key,\
-            base64.b64encode(json.dumps(serialized)))
+    channel.client.lpush.assert_called_with(queue_key, json.dumps(serialized))
 
 @mock.patch('kadabra.Metrics.deserialize')
 def test_receive_metrics(mock_deserialize):
     deserialized = "test"
     mock_deserialize.return_value = deserialized
     raw_metrics = {"name": "value"}
-    encoded = base64.b64encode(\
-            json.dumps(raw_metrics))
+    encoded = json.dumps(raw_metrics)
 
     channel = get_unit()
     channel.client.brpoplpush = MagicMock(return_value=encoded)
@@ -87,7 +85,7 @@ def test_complete_successful():
 
     metrics.serialize.assert_called_with()
     channel.client.lrem.assert_called_with(inprogress_key, 1,\
-            base64.b64encode(json.dumps(serialized)))
+            json.dumps(serialized))
 
 def test_complete_unsuccessful():
     serialized = {"name": "value"}
@@ -103,14 +101,14 @@ def test_complete_unsuccessful():
 
     metrics.serialize.assert_called_with()
     channel.client.lrem.assert_called_with(inprogress_key, 1,\
-            base64.b64encode(json.dumps(serialized)))
+            json.dumps(serialized))
 
 @mock.patch('kadabra.Metrics.deserialize')
 def test_in_progress(mock_deserialize):
     query_limit = 3
-    raw = [base64.b64encode(json.dumps({"nameOne": "valueOne"})),
-           base64.b64encode(json.dumps({"nameTwo": "valueTwo"})),
-           base64.b64encode(json.dumps({"nameThree": "valueThree"}))]
+    raw = [json.dumps({"nameOne": "valueOne"}),
+           json.dumps({"nameTwo": "valueTwo"}),
+           json.dumps({"nameThree": "valueThree"})]
     deserialized = ['one', 'two', 'three']
     mock_deserialize.side_effect = deserialized
 
@@ -123,5 +121,5 @@ def test_in_progress(mock_deserialize):
             query_limit - 1)
 
     for r in raw:
-        mock_deserialize.assert_any_call(json.loads(base64.b64decode(r)))
+        mock_deserialize.assert_any_call(json.loads(r))
     assert in_progress == deserialized

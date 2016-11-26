@@ -78,7 +78,7 @@ def test_stop():
     receiver_thread.stop()
     assert receiver_thread.stopped == True
 
-def test_is_stopped():
+def test_check_stopped():
     channel = MagicMock()
     publisher = MagicMock()
     logger = MagicMock()
@@ -86,9 +86,9 @@ def test_is_stopped():
     receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
     receiver_thread.stopped = False
 
-    assert receiver_thread._is_stopped() == False
+    assert receiver_thread._check_stopped() == False
     receiver_thread.stopped = True
-    assert receiver_thread._is_stopped() == True
+    assert receiver_thread._check_stopped() == True
 
 def test_run():
     channel = MagicMock()
@@ -97,10 +97,10 @@ def test_run():
 
     receiver_thread = kadabra.agent.ReceiverThread(channel, publisher, logger)
     receiver_thread._run_once = MagicMock()
-    receiver_thread._is_stopped = MagicMock()
-    receiver_thread._is_stopped.side_effect = [False, True]
+    receiver_thread._check_stopped = MagicMock()
+    receiver_thread._check_stopped.side_effect = [False, True]
 
     receiver_thread.run()
 
-    assert receiver_thread._is_stopped.call_count == 2
+    assert receiver_thread._check_stopped.call_count == 2
     assert receiver_thread._run_once.call_count == 1
