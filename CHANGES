@@ -3,6 +3,16 @@ Kadabra Changelog
 
 Here you can see the full list of changes between each Kadabra release.
 
+Version 0.3.0
+-------------
+- Support for Python 2.6, 3.3, 3.4, 3.5, and PyPy
+- Changed RedisChannel's message format, no longer uses Base64 encoding, as it
+  was only increasing message size (not sure why I implemented it in the first
+  place). This means existing installations of 0.2.0 will need to make sure
+  their Redis servers are empty (no in-queue or in-progress metrics) before
+  upgrading. Need to avoid this kind of change in the future, and potentially
+  version the messages themselves to prevent unhelpful crashes.
+
 Version 0.2.0
 -------------
 
