@@ -6,7 +6,7 @@ Sending Metrics
 This section describes channels in more detail, including the philosophy behind
 them and how they work internally. You won't need to use channels directly;
 rather you will configure one when you initialize your 
-:class:`~kadabra.Client` and :class:`~kadabra.Agent` (and usually the defaults
+:class:`~kadabra.Kadabra` and :class:`~kadabra.Agent` (and usually the defaults
 are fine). You also don't need to understand this section to use Kadabra; it's
 for those who are curious how the internals work.
 
@@ -31,7 +31,7 @@ Channels solve these issues by providing temporary intermediate storage that
 allows metrics to be published asynchronously with robust handling of failures.
 
 To use a channel you need to set up the appropriate storage mechanism (e.g.
-Redis server) and configure your Client and Agent to use it.
+Redis server) and configure your client API and Agent to use it.
 
 How Channels Work
 -----------------
@@ -39,7 +39,7 @@ How Channels Work
 Channels expose four methods:
 
 - **transport()** pushes metrics into the intermediate storage. It is used by
-  :class:`~kadabra.Client` to send metrics for publishing.
+  :class:`~kadabra.Kadabra` to send metrics for publishing.
 - **receive()** pulls metrics from the intermediate storage. It is used by the
   :class:`~kadabra.Agent` to fetch metrics for publishing. It also moves the
   metrics into a special "in-progress" queue, indicating that they are in the
@@ -73,7 +73,7 @@ simple to set up, and provides great performance. The configuration values are:
 
 You can overwrite any or none of these values in the ``CLIENT_CHANNEL_ARGS``
 and ``AGENT_CHANNEL_ARGS`` configuration keys. For more information on how to
-configure the Client and Agent see :doc:`configuration`.
+configure the client API and Agent see :doc:`configuration`.
 
 .. note:: Make sure your agent and client use the same channel type and
           arguments. Otherwise your metrics will not get published!

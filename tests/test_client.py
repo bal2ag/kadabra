@@ -8,7 +8,7 @@ NOW = datetime.datetime.utcnow()
 
 def test_client_ctor_unrecognized_channel():
     with pytest.raises(Exception):
-        kadabra.Client(configuration={"CLIENT_CHANNEL_TYPE": "grenjiweroni"})
+        kadabra.Kadabra(configuration={"CLIENT_CHANNEL_TYPE": "grenjiweroni"})
 
 # http://www.voidspace.org.uk/python/mock/patch.html#where-to-patch
 @mock.patch('kadabra.client.RedisChannel')
@@ -19,7 +19,7 @@ def test_client_ctor_defaults(mock_redis_channel):
     mock_redis_channel.return_value = channel
     mock_redis_channel.DEFAULT_ARGS = channel_default_args
 
-    client = kadabra.Client()
+    client = kadabra.Kadabra()
 
     mock_redis_channel.assert_called_with(**channel_default_args)
     assert client.default_dimensions == {}
@@ -36,15 +36,15 @@ def test_client_ctor_custom_channel_args(mock_redis_channel):
     mock_redis_channel.return_value = channel
     mock_redis_channel.DEFAULT_ARGS = channel_default_args
 
-    client = kadabra.Client(\
+    client = kadabra.Kadabra(\
             configuration={"CLIENT_CHANNEL_ARGS": combined_args})
 
     mock_redis_channel.assert_called_with(**combined_args)
     assert client.channel == channel
 
-@mock.patch('kadabra.client.Collector')
+@mock.patch('kadabra.client.MetricsCollector')
 @mock.patch('kadabra.client.RedisChannel')
-def test_client_get_collector_no_default_dimensions(mock_redis_channel,
+def test_client_metrics_no_default_dimensions(mock_redis_channel,
         mock_collector):
     timestamp_format = "timestamp_format"
     expected_collector = "test_collector"
@@ -56,16 +56,16 @@ def test_client_get_collector_no_default_dimensions(mock_redis_channel,
 
     mock_collector.return_value = expected_collector
 
-    client = kadabra.Client(\
+    client = kadabra.Kadabra(\
             configuration={"CLIENT_TIMESTAMP_FORMAT": timestamp_format})
-    collector = client.get_collector()
+    collector = client.metrics()
 
     mock_collector.assert_called_with(timestamp_format)
     assert collector == expected_collector
 
-@mock.patch('kadabra.client.Collector')
+@mock.patch('kadabra.client.MetricsCollector')
 @mock.patch('kadabra.client.RedisChannel')
-def test_client_get_collector_default_dimensions(mock_redis_channel,
+def test_client_metrics_default_dimensions(mock_redis_channel,
         mock_collector):
     timestamp_format = "timestamp_format"
     default_dimensions = {"one": "o", "two": "t"}
@@ -78,10 +78,10 @@ def test_client_get_collector_default_dimensions(mock_redis_channel,
 
     mock_collector.return_value = expected_collector
 
-    client = kadabra.Client(\
+    client = kadabra.Kadabra(\
             configuration={"CLIENT_DEFAULT_DIMENSIONS": default_dimensions,
                 "CLIENT_TIMESTAMP_FORMAT": timestamp_format})
-    collector = client.get_collector()
+    collector = client.metrics()
 
     mock_collector.assert_called_with(timestamp_format, **default_dimensions)
     assert collector == expected_collector
@@ -95,14 +95,14 @@ def test_client_send(mock_redis_channel):
     mock_redis_channel.send = MagicMock()
     mock_channel_instance = mock_redis_channel.return_value
 
-    client = kadabra.Client()
+    client = kadabra.Kadabra()
     client.send(to_send)
 
     mock_channel_instance.send.assert_called_with(to_send)
 
 def test_collector_ctor_no_dimensions():
     timestamp_format = "timestamp_format"
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
 
     assert collector.counters == {}
     assert collector.timers == {}
@@ -113,7 +113,7 @@ def test_collector_ctor_no_dimensions():
 def test_collector_ctor_dimensions():
     timestamp_format = "timestamp_format"
     dimensions = {"dimensionOne": "d1", "dimensionTwo": "d2"}
-    collector = kadabra.client.Collector(timestamp_format, **dimensions)
+    collector = kadabra.client.MetricsCollector(timestamp_format, **dimensions)
 
     assert collector.counters == {}
     assert collector.timers == {}
@@ -128,7 +128,7 @@ class MockLock(object):
 
 def test_collector_close_closed():
     timestamp_format = "timestamp_format"
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
     collector.close()
     with pytest.raises(kadabra.client.CollectorClosedError):
@@ -138,7 +138,7 @@ def test_collector_close_closed():
 
 def test_collector_set_dimension_closed():
     timestamp_format = "timestamp_format"
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
     collector.close()
     with pytest.raises(kadabra.client.CollectorClosedError):
@@ -148,7 +148,7 @@ def test_collector_set_dimension_closed():
 
 def test_collector_add_count_closed():
     timestamp_format = "timestamp_format"
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
     collector.close()
     with pytest.raises(kadabra.client.CollectorClosedError):
@@ -158,7 +158,7 @@ def test_collector_add_count_closed():
 
 def test_collector_set_timer_closed():
     timestamp_format = "timestamp_format"
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
     collector.close()
     with pytest.raises(kadabra.client.CollectorClosedError):
@@ -171,7 +171,7 @@ def test_collector_set_dimension():
     dimension_name = "name"
     dimension_value = "value"
     timestamp_format = "timestamp_format"
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.set_dimension(dimension_name, dimension_value)
@@ -184,7 +184,7 @@ def test_collector_set_dimension_override():
     dimension_name = "name"
     dimension_value = "newValue"
     timestamp_format = "timestamp_format"
-    collector = kadabra.client.Collector(timestamp_format, name="oldValue")
+    collector = kadabra.client.MetricsCollector(timestamp_format, name="oldValue")
     collector.lock = MockLock()
 
     collector.set_dimension(dimension_name, dimension_value)
@@ -199,7 +199,7 @@ def test_collector_add_count(mock_get_now):
     count_value = 1.0
     timestamp_format = "timestamp_format"
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.add_count(count_name, count_value)
@@ -217,7 +217,7 @@ def test_collector_add_count_timestamp(mock_get_now):
     timestamp_format = "timestamp_format"
     timestamp = NOW + datetime.timedelta(seconds=30)
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.add_count(count_name, count_value, timestamp=timestamp)
@@ -235,7 +235,7 @@ def test_collector_add_count_metadata(mock_get_now):
     count_metadata = {"name": "value"}
     timestamp_format = "timestamp_format"
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.add_count(count_name, count_value, metadata=count_metadata)
@@ -252,7 +252,7 @@ def test_collector_add_count_existing(mock_get_now):
     count_value = 1.0
     timestamp_format = "timestamp_format"
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.add_count(count_name, count_value)
@@ -271,7 +271,7 @@ def test_collector_add_count_existing_replace_metadata(mock_get_now):
     count_metadata = {"name": "value"}
     timestamp_format = "timestamp_format"
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.add_count(count_name, count_value, metadata=count_metadata)
@@ -295,7 +295,7 @@ def test_collector_add_count_existing_replace_timestamp(mock_get_now):
     timestamp_format = "timestamp_format"
     timestamp = NOW + datetime.timedelta(seconds=30)
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.add_count(count_name, count_value)
@@ -315,7 +315,7 @@ def test_collector_set_timer(mock_get_now):
     unit = kadabra.Units.MILLISECONDS
     timestamp_format = "timestamp_format"
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.set_timer(timer_name, timer_value, unit)
@@ -334,7 +334,7 @@ def test_collector_set_timer_timestamp():
     timestamp_format = "timestamp_format"
     timestamp = NOW + datetime.timedelta(seconds=30)
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.set_timer(timer_name, timer_value, unit, timestamp=timestamp)
@@ -354,7 +354,7 @@ def test_collector_set_timer_metadata(mock_get_now):
     timestamp_format = "timestamp_format"
     metadata = {"name": "value"}
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.set_timer(timer_name, timer_value, unit, metadata=metadata)
@@ -373,7 +373,7 @@ def test_collector_set_timer_existing():
     timestamp_format = "timestamp_format"
     timestamp = NOW + datetime.timedelta(seconds=30)
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.set_timer(timer_name, timer_value, unit)
@@ -397,7 +397,7 @@ def test_collector_set_timer_existing_replace_metadata():
     timestamp_format = "timestamp_format"
     timestamp = NOW + datetime.timedelta(seconds=30)
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     collector.set_timer(timer_name, timer_value, unit, metadata=metadata)
@@ -433,7 +433,7 @@ def test_collector_close(mock_metrics, mock_timer, mock_counter,
 
     timestamp_format = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-    collector = kadabra.client.Collector(timestamp_format)
+    collector = kadabra.client.MetricsCollector(timestamp_format)
     collector.lock = MockLock()
 
     dimensions = [

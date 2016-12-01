@@ -60,13 +60,13 @@ Now, in a separate terminal, open up a Python interpreter. We'll record some
 metrics and publish them. First, let's initialize the Kadabra client::
 
     >>> import kadabra
-    >>> client = kadabra.Client()
+    >>> client = kadabra.Kadabra()
 
-Now let's get a :class:`~kadabra.client.Collector` object from our client. This
-is the API we use to record metrics in our application. It is thread-safe and
-can be shared throughout our application::
+Now let's get a :class:`~kadabra.client.MetricsCollector` object from our
+client. This is the API we use to record metrics in our application. It is
+thread-safe and can be shared throughout our application::
 
-    >>> metrics = client.get_collector()
+    >>> metrics = client.metrics()
 
 In a real application, the metrics code would be located in places where we
 care about recording important information, such as customer sales, user
@@ -93,7 +93,7 @@ agent.
 Configuration
 -------------
 
-You can configure the Client and the Agent using a dictionary when you
+You can configure the client API and the Agent using a dictionary when you
 instantiate them to control various aspects of their functionality. For more
 information see the :doc:`configuration` section.
 

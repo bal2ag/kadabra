@@ -93,8 +93,8 @@ records some metrics. We'll call it fib.py::
 
     import kadabra, sys, datetime
 
-    client = kadabra.Client()
-    metrics = client.get_collector()
+    client = kadabra.Kadabra()
+    metrics = client.metrics()
     metrics.set_dimension("program", "fibonacci")
     
     n = int(sys.argv[1])

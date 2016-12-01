@@ -4,9 +4,9 @@ Collecting Metrics
 ==================
 
 This section describes in detail the kinds of metrics you can gather in your
-application using a :class:`~kadabra.client.Collector` which can be retrieved
-via the client's :meth:`~kadabra.Client.get_collector` method, and the
-semantics of using the collector. 
+application using a :class:`~kadabra.client.MetricsCollector` which can be
+retrieved via the client's :meth:`~kadabra.Kadabra.metrics` method, and the
+semantics of using the collector.
 
 Dimensions
 ----------
@@ -32,10 +32,10 @@ Counters
 --------
 
 :class:`~kadabra.Counter`\s track floating point values identified by a key.
-The collector's :meth:`~kadabra.client.Collector.add_count` method will create
-a counter if it doesn't exist or add a value to an existing counter. Once the
-collector is closed and sent, only the final value will be reported for each
-counter::
+The collector's :meth:`~kadabra.client.MetricsCollector.add_count` method will
+create a counter if it doesn't exist or add a value to an existing counter.
+Once the collector is closed and sent, only the final value will be reported
+for each counter::
 
     >>> metrics.add_count("myCount", 1)
     >>> metrics.add_count("myCount", 3)
@@ -62,8 +62,9 @@ the time should be reported in::
 
 Common units are found in :class:`~kadabra.Units`.
 
-Timers can only be set; if you call :meth:`~kadabra.client.Collector.set_timer`
-with an existing key, the timer will be overwritten with the new value.
+Timers can only be set; if you call
+:meth:`~kadabra.client.MetricsCollector.set_timer` with an existing key, the
+timer will be overwritten with the new value.
 
 Metadata
 --------
@@ -85,9 +86,9 @@ dictionary to the "metadata" argument when you record a counter or timer::
 If you specify metadata for an existing counter or timer, the previous
 metadata will be `completely` replaced with the new metadata. If you have
 specified previous metadata for a timer or counter and don't specify metadata
-on subsequent calls to :meth:`~kadabra.client.Collector.add_count` or
-:meth:`~kadabra.client.Collector.set_timer` for the same counter or timer, the
-previous metadata will remain.
+on subsequent calls to :meth:`~kadabra.client.MetricsCollector.add_count` or
+:meth:`~kadabra.client.MetricsCollector.set_timer` for the same counter or
+timer, the previous metadata will remain.
 
 The way metadata is ultimately handled depends on the publisher. For example,
 the :class:`~kadabra.publishers.InfluxDBPublisher` will transform the metadata
@@ -107,9 +108,9 @@ Otherwise your metric data may appear delayed and inaccurate.
 By default, timestamps are associated with counters when they are first
 created, and timers each time they are set. You can override this behavior by
 passing your own :class:`datetime.datetime` to the ``timestamp`` argument of
-:meth:`~kadabra.client.Collector.add_count` or
-:meth:`~kadabra.client.Collector.set_timer`, which will associate the metric
-with that timestamp.
+:meth:`~kadabra.client.MetricsCollector.add_count` or
+:meth:`~kadabra.client.MetricsCollector.set_timer`, which will associate the
+metric with that timestamp.
 
 For example, if you wanted to set the timestamp for a metric to 5 minutes ago::
 

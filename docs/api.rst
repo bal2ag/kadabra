@@ -6,18 +6,18 @@ API
 .. module:: kadabra
 
 This covers all the documentation for Kadabra's various classes, including
-the Client, Agent, Metrics, Channels, and Publishers.
+the client API, Agent, Metrics, Channels, and Publishers.
 
 .. _api-client:
 
 Client
 ------
 
-.. autoclass:: kadabra.Client
+.. autoclass:: kadabra.Kadabra
    :members:
    :inherited-members:
 
-.. autoclass:: kadabra.client.Collector
+.. autoclass:: kadabra.client.MetricsCollector
    :members:
    :inherited-members:
 

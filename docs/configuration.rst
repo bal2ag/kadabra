@@ -5,18 +5,18 @@ Configuration
 
 Kadabra has a default set of configuration values. You can override the default
 configuration by specifying a dictionary when you initialize the
-:class:`~kadabra.Client` and :class:`~kadabra.Agent` whose keys are the
+:class:`~kadabra.Kadabra` and :class:`~kadabra.Agent` whose keys are the
 configuration you want to override and whose values are the values you want to
 use.
 
-For exampe, configuring the Client to use a different Redis port might look
+For exampe, configuring the client API to use a different Redis port might look
 like this::
 
     my_config = {
         'CLIENT_CHANNEL_ARGS': {
             'port': 6500
     }
-    client = kadabra.Client(configuration=my_config)
+    client = kadabra.Kadabra(configuration=my_config)
 
 Note that for configuration values that are dictionaries (like arguments for
 initializing the channel), you only need to specify the keys/values that you
@@ -34,10 +34,10 @@ arguments) might look like this::
     agent = kadabra.Agent(configuration=my_config)
 
 A full list of the recognized configuration keys, descriptions of each, and
-their default values for the Client and the Agent are provided below.
+their default values for the client API and the Agent are provided below.
 
-Client
-------
+Client API
+----------
 
 =========================== ==================================================
 `CLIENT_DEFAULT_DIMENSIONS` If specified, any collectors instantiated from the

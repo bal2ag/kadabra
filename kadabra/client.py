@@ -5,15 +5,15 @@ from .config import DEFAULT_CONFIG
 from .metrics import Dimension, Counter, Timer, Metrics
 from .utils import get_now
 
-class Client(object):
+class Kadabra(object):
     """Main client API for Kadabra. In conjunction with the
-    :class:`~kadabra.client.Collector`, allows you to collect metrics from your
-    application and queue them for publishing via a channel.
+    :class:`~kadabra.client.MetricsCollector`, allows you to collect metrics
+    from your application and queue them for publishing via a channel.
 
     Typically you will use like so::
 
-        client = Client()
-        metrics = client.get_collector()
+        kadabra = Kadabra()
+        metrics = kadabra.metrics()
         ...
         metrics.add_count("myCount", 1.0)
         ...
@@ -21,7 +21,7 @@ class Client(object):
         ...
         metrics.add_count("myCount", 1.0)
         ...
-        client.send(metrics.close())
+        kadabra.send(metrics.close())
 
     :type configuration: dict
     :param configuration: Dictionary of configuration to use in place of the
@@ -51,49 +51,48 @@ class Client(object):
 
         self.timestamp_format = config["CLIENT_TIMESTAMP_FORMAT"]
 
-    def get_collector(self):
-        """Return a :class:`~kadabra.client.Collector` initialized with any
-        dimensions as specified by this Client's default dimensions. The
-        collector can be used to gather metrics from your application
-        code.
+    def metrics(self):
+        """Return a :class:`~kadabra.client.MetricsCollector` initialized with
+        any dimensions as specified by the default dimensions. The collector
+        can be used to gather metrics from your application code.
         
-        :rtype: ~kadabra.client.Collector
-        :returns: A :class:`~kadabra.client.Collector` instance.
+        :rtype: ~kadabra.client.MetricsCollector
+        :returns: A :class:`~kadabra.client.MetricsCollector` instance.
         """
-        return Collector(self.timestamp_format, **self.default_dimensions)
+        return MetricsCollector(self.timestamp_format,
+                **self.default_dimensions)
 
     def send(self, metrics):
         """Send a :class:`Metrics` instance to this client's configured channel
         so that it can be received and published by the agent. Note that a
         Metrics instance can be retrieved from a collector by calling its
-        :meth:`~kadabra.client.Collector.close` method.
+        :meth:`~kadabra.client.MetricsCollector.close` method.
 
         :type metrics: ~kadabra.Metrics
         :param metrics: The :class:`Metrics` instance to be published.
         """
         self.channel.send(metrics)
 
-class Collector(object):
+class MetricsCollector(object):
     """A class for collecting metrics. Once initialized, instances of this
     class collect metrics by aggregating counts and keeping track of dimensions
     and timers. Typically you won't instantiate this class directly, but rather
-    retrieve an instance from the Client's :meth:`~Client.get_collector`
-    method.
+    retrieve an instance from the client's :meth:`~Kadabra.metrics` method.
 
     :class:`Counter`\s are floating point values aggregated over the lifetime
     of this object, and published as a single value (per counter name).
 
     :class:`Timer`\s will be a floating point value along with a unit.
 
-    A Collector instance can be used to collect metrics until it is closed by
-    calling its :meth:`~kadabra.client.Collector.close` method. After close()
-    has been called, this object can be safely published without the
+    A collector instance can be used to collect metrics until it is closed by
+    calling its :meth:`~kadabra.client.MetricsCollector.close` method. After
+    close() has been called, this object can be safely published without the
     possibility of "losing" additional metrics between the time it is closed
     and the time it is published.
 
-    Although Collector objects are thread-safe (meaning the same object can be
+    Although collector objects are thread-safe (meaning the same object can be
     used by multiple threads), note that any threads that attempt to use a
-    Collector instance after it has been closed will throw an exception.
+    collector instance after it has been closed will throw an exception.
 
     :type timestamp_format: string
     :param timestamp_format: The format for timestamps when serializing into a
@@ -113,7 +112,7 @@ class Collector(object):
         self.lock = threading.Lock()
 
     def set_dimension(self, name, value):
-        """Set a dimension for this Collector object. If it already exists, it
+        """Set a dimension for this collector object. If it already exists, it
         will be overwritten with the new value.
 
         :type name: string
@@ -122,7 +121,7 @@ class Collector(object):
         :type value: string
         :param value: The value of the dimension to be set.
 
-        :raises CollectorClosedError: If this Collector object has
+        :raises CollectorClosedError: If this collector object has
                                       already been closed.
         """
         self.lock.acquire()
@@ -136,7 +135,7 @@ class Collector(object):
 
     def add_count(self, name, value, timestamp=None, metadata=None,
             replace_timestamp=False):
-        """Add a new counter to this Collector object, or add the value to an
+        """Add a new counter to this collector object, or add the value to an
         existing counter if it already exists.
 
         :type name: string
@@ -167,7 +166,7 @@ class Collector(object):
                                   timestamp when you add to an existing
                                   counter.
 
-        :raises CollectorClosedError: If this Collector object has
+        :raises CollectorClosedError: If this collector object has
                                       already been closed.
         """
         self.lock.acquire()
@@ -196,7 +195,7 @@ class Collector(object):
             self.lock.release()
 
     def set_timer(self, name, value, unit, timestamp=None, metadata=None):
-        """Set a timer value for this Collector object using a
+        """Set a timer value for this collector object using a
         :class:`~datetime.timedelta`. If it already exists, it will be
         overwritten with the new value.
 
@@ -224,7 +223,7 @@ class Collector(object):
                         specify it, the previous metadata for the timer will
                         remain unchanged.
 
-        :raises CollectorClosedError: If this Collector object has
+        :raises CollectorClosedError: If this collector object has
                                       already been closed.
         """
         self.lock.acquire()
@@ -253,15 +252,15 @@ class Collector(object):
             self.lock.release()
 
     def close(self):
-        """Close this Collector object and return an equivalent
+        """Close this collector object and return an equivalent
         :class:`Metrics` object. After this method is called, you can no longer
         set dimensions, set timers, or add counts to this object.
 
         :rtype: ~kadabra.Metrics
-        :returns: A :class:`Metrics` instance from the Collector's dimensions,
+        :returns: A :class:`Metrics` instance from the collector's dimensions,
                   counters, and timers.
 
-        :raises CollectorClosedError: Raised if this Collector object
+        :raises CollectorClosedError: Raised if this collector object
                                       has already been closed.
         """
         self.lock.acquire()
@@ -282,8 +281,9 @@ class Collector(object):
 
 class CollectorClosedError(BaseException):
     """Raised if you try to add metrics to or close a
-    :class:`~kadabra.client.Collector` object that has already been closed."""
+    :class:`~kadabra.client.MetricsCollector` object that has already been
+    closed."""
     def __init__(self):
         super(CollectorClosedError, self).__init__(\
-                "Collector object has been closed")
+                "MetricsCollector object has been closed")
 
