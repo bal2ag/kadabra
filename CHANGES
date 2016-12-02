@@ -3,6 +3,13 @@ Kadabra Changelog
 
 Here you can see the full list of changes between each Kadabra release.
 
+Version 0.4.0
+-------------
+- Renamed "Client" to "Kadabra"
+- Renamed "Collector" to "MetricsCollector"
+- Renamed "get_collector()" to "metrics()"
+- Updated docs to reflect these changes
+
 Version 0.3.0
 -------------
 - Support for Python 2.6, 3.3, 3.4, 3.5, and PyPy
