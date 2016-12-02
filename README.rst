@@ -47,15 +47,15 @@ Usage
 
 Instrument your code to record metrics with a simple API::
 
-    import kadabra
-    client = kadabra.Client()
-    metrics = client.get_collector()
+    from kadabra import Kadabra
+    kadabra = Kadabra()
+    metrics = kadabra.metrics()
     ...
     metrics.add_count("userSignup", 1.0)
     ...
     metrics.add_count("success", 1.0)
     ...
-    client.send(metrics.close())
+    kadabra.send(metrics.close())
 
 Then configure and run the agent in a separate process to publish your metrics
 into a database!
