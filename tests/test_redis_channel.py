@@ -2,7 +2,7 @@ import redis
 import kadabra
 import json
 
-from mock import MagicMock, mock
+from mock import MagicMock, mock, call
 
 host = "host"
 port = 1234
@@ -71,6 +71,32 @@ def test_receive_nometrics():
             timeout=10)
     assert metrics == None
 
+@mock.patch('kadabra.channels.Metrics.deserialize')
+def test_receive_batch(mock_deserialize):
+    channel = get_unit()
+
+    max_batch_size = 3
+
+    m1 = '{"m1_name": "m1_value"}'
+    m2 = '{"m2_name": "m2_value"}'
+    metrics = [m1, m2, None]
+    expected_batch = [MagicMock(), MagicMock()]
+    mock_deserialize.side_effect = expected_batch
+
+    pipeline = MagicMock()
+    pipeline.rpoplpush = MagicMock()
+    pipeline.execute = MagicMock(return_value=metrics)
+    channel.client.pipeline = MagicMock(return_value=pipeline)
+
+    batch = channel.receive_batch(max_batch_size)
+
+    pipeline.rpoplpush.assert_has_calls(
+            [call(queue_key, inprogress_key) for i in range(max_batch_size)])
+    mock_deserialize.assert_has_calls([
+            call(json.loads(m1)),
+            call(json.loads(m2))])
+    assert batch == expected_batch
+
 def test_complete_successful():
     serialized = {"name": "value"}
 
@@ -79,12 +105,14 @@ def test_complete_successful():
 
     metrics.serialize = MagicMock(return_value=serialized)
 
-    channel.client.lrem = MagicMock(return_value=1)
+    pipeline = MagicMock()
+    pipeline.lrem = MagicMock(return_value=1)
+    channel.client.pipeline = MagicMock(return_value=pipeline)
 
-    channel.complete(metrics)
+    channel.complete([metrics])
 
     metrics.serialize.assert_called_with()
-    channel.client.lrem.assert_called_with(inprogress_key, 1,\
+    pipeline.lrem.assert_called_with(inprogress_key, 1,\
             json.dumps(serialized))
 
 def test_complete_unsuccessful():
@@ -95,12 +123,14 @@ def test_complete_unsuccessful():
 
     metrics.serialize = MagicMock(return_value=serialized)
 
-    channel.client.lrem = MagicMock(return_value=0)
+    pipeline = MagicMock()
+    pipeline.lrem = MagicMock(return_value=0)
+    channel.client.pipeline = MagicMock(return_value=pipeline)
 
-    channel.complete(metrics)
+    channel.complete([metrics])
 
     metrics.serialize.assert_called_with()
-    channel.client.lrem.assert_called_with(inprogress_key, 1,\
+    pipeline.lrem.assert_called_with(inprogress_key, 1,\
             json.dumps(serialized))
 
 @mock.patch('kadabra.Metrics.deserialize')

@@ -53,8 +53,8 @@ def test_run_once():
     nanny_thread._run_once()
 
     queue.get.assert_called_with(timeout=10)
-    publisher.publish.assert_called_with(metrics)
-    channel.complete.assert_called_with(metrics)
+    publisher.publish.assert_called_with([metrics])
+    channel.complete.assert_called_with([metrics])
 
 def test_run_once_empty_queue():
     channel = MagicMock()
@@ -91,7 +91,7 @@ def test_run_once_exception():
     nanny_thread._run_once()
 
     queue.get.assert_called_with(timeout=10)
-    publisher.publish.assert_called_with(metrics)
+    publisher.publish.assert_called_with([metrics])
     channel.complete.assert_has_calls([])
 
 def test_stop():

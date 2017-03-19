@@ -57,7 +57,7 @@ def test_publish_no_points(mock_influxdb):
 
     publisher = kadabra.publishers.InfluxDBPublisher(host, port, database,
             timeout)
-    publisher.publish(metrics)
+    publisher.publish([metrics])
 
     publisher.client.write_points.assert_has_calls([])
 
@@ -164,7 +164,7 @@ def test_publish(mock_influxdb):
 
     publisher = kadabra.publishers.InfluxDBPublisher(host, port, database,
             timeout)
-    publisher.publish(metrics)
+    publisher.publish([metrics])
 
     publisher.client.write_points.assert_called_with(expected_points)
 

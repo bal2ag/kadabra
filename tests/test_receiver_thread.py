@@ -45,8 +45,8 @@ def test_run_once_metrics():
 
     channel.receive.assert_called_with()
     metrics.serialize.assert_called_with()
-    publisher.publish.assert_called_with(metrics)
-    channel.complete.assert_called_with(metrics)
+    publisher.publish.assert_called_with([metrics])
+    channel.complete.assert_called_with([metrics])
 
 def test_run_once_exception():
     channel = MagicMock()
@@ -65,7 +65,7 @@ def test_run_once_exception():
 
     channel.receive.assert_called_with()
     metrics.serialize.assert_called_with()
-    publisher.publish.assert_called_with(metrics)
+    publisher.publish.assert_called_with([metrics])
     channel.complete.assert_has_calls([])
 
 def test_stop():

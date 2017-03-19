@@ -23,10 +23,10 @@ class DebugPublisher(object):
         """Publish the metrics by logging them (in serialized JSON format) to
         the publisher's logger at the INFO level.
 
-        :type metrics: ~kadabra.Metrics
-        :param metrics: The metrics to publish.
+        :type metrics: list
+        :param metrics: The list of ~kadabra.Metrics to publish.
         """
-        self.logger.info(metrics.serialize())
+        self.logger.info([m.serialize() for m in metrics])
 
 class InfluxDBPublisher(object):
     """Publish metrics by persisting them into an InfluxDB database. Series
@@ -74,33 +74,35 @@ class InfluxDBPublisher(object):
         :param metrics: The metrics to publish.
         """
         data = []
-        tags = dict([(d.name, d.value) for d in metrics.dimensions])
 
-        for timer in metrics.timers:
-            fields = dict([(k, v) for k,v in timer.metadata.items()])
-            fields["value"] = timedelta_total_seconds(timer.value) *\
-                    timer.unit.seconds_offset
-            fields["unit"] = timer.unit.name
-            datum = {
-                "measurement": timer.name,
-                "tags": tags,
-                "time": datetime.datetime.strftime(timer.timestamp,
-                    metrics.timestamp_format),
-                "fields": fields
-            }
-            data.append(datum)
+        for m in metrics:
+            tags = dict([(d.name, d.value) for d in m.dimensions])
 
-        for counter in metrics.counters:
-            fields = dict([(k, v) for k,v in counter.metadata.items()])
-            fields["value"] = counter.value
-            datum = {
-                "measurement": counter.name,
-                "tags": tags,
-                "time": datetime.datetime.strftime(counter.timestamp,
-                    metrics.timestamp_format),
-                "fields": fields
-            }
-            data.append(datum)
+            for timer in m.timers:
+                fields = dict([(k, v) for k,v in timer.metadata.items()])
+                fields["value"] = timedelta_total_seconds(timer.value) *\
+                        timer.unit.seconds_offset
+                fields["unit"] = timer.unit.name
+                datum = {
+                    "measurement": timer.name,
+                    "tags": tags,
+                    "time": datetime.datetime.strftime(timer.timestamp,
+                        m.timestamp_format),
+                    "fields": fields
+                }
+                data.append(datum)
+
+            for counter in m.counters:
+                fields = dict([(k, v) for k,v in counter.metadata.items()])
+                fields["value"] = counter.value
+                datum = {
+                    "measurement": counter.name,
+                    "tags": tags,
+                    "time": datetime.datetime.strftime(counter.timestamp,
+                        m.timestamp_format),
+                    "fields": fields
+                }
+                data.append(datum)
 
         if len(data) > 0:
             self.client.write_points(data)

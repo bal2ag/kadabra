@@ -3,6 +3,10 @@ import pytest
 
 from mock import MagicMock, mock, call
 
+def test_ctor_unrecognized_agent_type():
+    with pytest.raises(Exception):
+        kadabra.Agent(configuration={"AGENT_TYPE": "ehjgrhjehe"})
+
 def test_ctor_unrecognized_channel():
     with pytest.raises(Exception):
         kadabra.Agent(configuration={"AGENT_CHANNEL_TYPE": "ehjgrhjehe"})
@@ -33,34 +37,85 @@ def test_ctor_defaults(mock_nanny, mock_receiver, mock_redis_channel,
     nanny = "testNanny"
     mock_nanny.return_value = nanny
 
-    expected_receiver_threads =\
-            kadabra.config.DEFAULT_CONFIG["AGENT_RECEIVER_THREADS"]
-    expected_nanny_frequency_seconds =\
-            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_FREQUENCY_SECONDS"]
-    expected_nanny_threshold_seconds =\
-            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_THRESHOLD_SECONDS"]
-    expected_nanny_query_limit =\
-            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_QUERY_LIMIT"]
-    expected_nanny_num_threads =\
-            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_THREADS"]
-
     agent = kadabra.Agent()
+
+    expected_receiver_args = {
+        "channel": channel,
+        "publisher": publisher,
+        "logger": agent.logger,
+        "receiver_threads":
+                kadabra.config.DEFAULT_CONFIG["AGENT_RECEIVER_THREADS"]
+    }
+    expected_nanny_args = {
+        "channel": channel,
+        "publisher": publisher,
+        "logger": agent.logger,
+        "frequency_seconds": 
+            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_FREQUENCY_SECONDS"],
+        "threshold_seconds":
+            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_THRESHOLD_SECONDS"],
+        "query_limit": 
+            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_QUERY_LIMIT"],
+        "num_threads": 
+            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_THREADS"]
+    }
 
     mock_redis_channel.assert_called_with(**channel_default_args)
     mock_debug_publisher.assert_called_with(**publisher_default_args)
-    mock_receiver.assert_called_with(
-            channel,
-            publisher,
-            agent.logger,
-            expected_receiver_threads)
-    mock_nanny.assert_called_with(
-            channel,
-            publisher,
-            agent.logger,
-            expected_nanny_frequency_seconds,
-            expected_nanny_threshold_seconds,
-            expected_nanny_query_limit,
-            expected_nanny_num_threads)
+    mock_receiver.assert_called_with(**expected_receiver_args)
+    mock_nanny.assert_called_with(**expected_nanny_args)
+    assert agent.receiver == receiver
+    assert agent.nanny == nanny
+
+@mock.patch('kadabra.agent.DebugPublisher')
+@mock.patch('kadabra.agent.RedisChannel')
+@mock.patch('kadabra.agent.BatchedReceiver')
+@mock.patch('kadabra.agent.BatchedNanny')
+def test_ctor_batched_defaults(mock_nanny, mock_receiver, mock_redis_channel,
+        mock_debug_publisher):
+    channel = "testChannel"
+    channel_default_args = {"channelArg1": "1", "channelArg2": 2}
+    mock_redis_channel.return_value = channel
+    mock_redis_channel.DEFAULT_ARGS = channel_default_args
+
+    publisher = "testPublisher"
+    publisher_default_args = {"publisherArg1": "5", "publisherArg2": 6}
+    mock_debug_publisher.return_value = publisher
+    mock_debug_publisher.DEFAULT_ARGS = publisher_default_args
+
+    receiver = "testReceiver"
+    mock_receiver.return_value = receiver
+
+    nanny = "testNanny"
+    mock_nanny.return_value = nanny
+
+    agent = kadabra.Agent(configuration={"AGENT_TYPE": "batched"})
+
+    expected_receiver_args = {
+        "channel": channel,
+        "publisher": publisher,
+        "logger": agent.logger,
+        "publishing_interval":
+            kadabra.config.DEFAULT_CONFIG["BATCHED_AGENT_INTERVAL_SECONDS"],
+        "max_batch_size":
+            kadabra.config.DEFAULT_CONFIG["BATCHED_AGENT_MAX_BATCH_SIZE"]
+    }
+    expected_nanny_args = {
+        "channel": channel,
+        "publisher": publisher,
+        "logger": agent.logger,
+        "frequency_seconds": 
+            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_FREQUENCY_SECONDS"],
+        "threshold_seconds":
+            kadabra.config.DEFAULT_CONFIG["AGENT_NANNY_THRESHOLD_SECONDS"],
+        "max_batch_size": 
+            kadabra.config.DEFAULT_CONFIG["BATCHED_AGENT_NANNY_MAX_BATCH_SIZE"]
+    }
+
+    mock_redis_channel.assert_called_with(**channel_default_args)
+    mock_debug_publisher.assert_called_with(**publisher_default_args)
+    mock_receiver.assert_called_with(**expected_receiver_args)
+    mock_nanny.assert_called_with(**expected_nanny_args)
     assert agent.receiver == receiver
     assert agent.nanny == nanny
 

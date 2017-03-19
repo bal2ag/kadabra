@@ -39,6 +39,8 @@ class Agent(object):
         self.logger = logging.getLogger(config["AGENT_LOGGER_NAME"])
         self.logger.info("Initializing Agent with config: %s" % str(config))
 
+        agent_type = config.get("AGENT_TYPE", "default")
+
         channel_type = config["AGENT_CHANNEL_TYPE"]
         custom_channel_args = config["AGENT_CHANNEL_ARGS"]
         if channel_type == 'redis':
@@ -68,18 +70,35 @@ class Agent(object):
                 publisher_args[k] = v
         publisher = publisher_type(**publisher_args)
 
-        receiver_threads = config["AGENT_RECEIVER_THREADS"]
-
         nanny_frequency_seconds = config["AGENT_NANNY_FREQUENCY_SECONDS"]
         nanny_threshold_seconds = config["AGENT_NANNY_THRESHOLD_SECONDS"]
-        nanny_query_limit = config["AGENT_NANNY_QUERY_LIMIT"]
-        nanny_num_threads = config["AGENT_NANNY_THREADS"]
+        receiver_args = {"channel": channel, "publisher": publisher, "logger":
+                self.logger}
+        nanny_args = {"channel": channel, "publisher": publisher, "logger":
+                self.logger, "frequency_seconds": nanny_frequency_seconds,
+                "threshold_seconds": nanny_threshold_seconds}
 
-        self.receiver = Receiver(channel, publisher, self.logger,
-                receiver_threads)
-        self.nanny = Nanny(channel, publisher, self.logger,
-                nanny_frequency_seconds, nanny_threshold_seconds,
-                nanny_query_limit, nanny_num_threads)
+        if agent_type == "default":
+            receiver_type = Receiver
+            receiver_args["receiver_threads"] =\
+                    config["AGENT_RECEIVER_THREADS"]
+            nanny_type = Nanny
+            nanny_args["query_limit"] = config["AGENT_NANNY_QUERY_LIMIT"]
+            nanny_args["num_threads"] = config["AGENT_NANNY_THREADS"]
+        elif agent_type == "batched":
+            receiver_type = BatchedReceiver
+            receiver_args["publishing_interval"] =\
+                    config["BATCHED_AGENT_INTERVAL_SECONDS"]
+            receiver_args["max_batch_size"] =\
+                    config["BATCHED_AGENT_MAX_BATCH_SIZE"]
+            nanny_type = BatchedNanny
+            nanny_args["max_batch_size"] =\
+                    config["BATCHED_AGENT_NANNY_MAX_BATCH_SIZE"]
+        else:
+            raise Exception("Unrecognized agent type: '%s'" % agent_type)
+
+        self.receiver = receiver_type(**receiver_args)
+        self.nanny = nanny_type(**nanny_args)
 
         self.stopped = False
 
@@ -212,8 +231,8 @@ class ReceiverThread(threading.Thread):
             if metrics is not None:
                 self.logger.debug("Publishing metrics: %s" %
                         metrics.serialize())
-                self.publisher.publish(metrics)
-                self.channel.complete(metrics)
+                self.publisher.publish([metrics])
+                self.channel.complete([metrics])
         except:
             self.logger.warn("Receiver thread encountered exception",\
                     exc_info=1)
@@ -226,6 +245,79 @@ class ReceiverThread(threading.Thread):
         :returns: True if the thread has been stopped, False otherwise.
         """
         return self.stopped
+
+class BatchedReceiver(object):
+    """An alternative to the normal Receiver, the BatchedReceiver will
+    periodically wake up and attempt to publish all metrics at once. Publishing
+    failures will still result in the metrics being retried by the Nanny.
+
+    :type channel: :ref:`api-channels`
+    :param channel: The channel to read metrics from. See
+                    :ref:`api-channels`.
+
+    :type publisher: :ref:`api-publishers`
+    :param publisher: The publisher to use for publishing metrics. See
+                      :ref:`api-publishers`.
+
+    :type logger: ~logging.Logger
+    :param logger: The logger to use.
+
+    :type publishing_interval: integer
+    :param publishing_interval: The interval at which metrics should be
+                                attempted to be published.
+
+    :type max_batch_size: integer
+    :param max_batch_size: The maximum number of metric collections to publish
+                           at once. Note that more total metrics will actually
+                           be published from this (since each collection
+                           contains several metrics grouped by dimension). This
+                           parameter just controls the number of metric
+                           collections that are retrieved from the channel and
+                           published at once.
+    """
+    def __init__(self, channel, publisher, logger, publishing_interval,
+            max_batch_size):
+        self.channel = channel
+        self.publisher = publisher
+        self.logger = logger
+        self.publishing_interval = publishing_interval
+        self.max_batch_size = max_batch_size
+
+        self.timer = None
+
+    def start(self):
+        """Start the batched receiver."""
+        timer = Timer(self.publishing_interval, self._run_batched_receiver)
+        timer.name = "KadabraBatchedReceiverRunner"
+        self.timer = timer
+        timer.start()
+
+    def stop(self):
+        """Stop the batched receiver."""
+        self.logger.info("Stopping BatchedReceiver...")
+        if self.timer is not None:
+            self.timer.cancel()
+
+    def _run_batched_receiver(self):
+        """Run the batched receiver. This will grab all metrics from the
+        queue, move them to the in progress queue, attempt to publish them with
+        one call to the publisher, and, if successful, mark each one as
+        complete. It will run at the interval specified by the
+        ``publishing_interval``."""
+        try:
+            self.logger.debug("Running batched receiver")
+            batch = self.channel.receive_batch(self.max_batch_size)
+            self.logger.debug("%s metrics received" % len(batch))
+            self.publisher.publish(batch)
+            self.channel.complete(batch)
+        except:
+            self.logger.warn("Batched receiver runner encountered exception",\
+                    exc_info=1)
+        finally:
+            timer = Timer(self.publishing_interval, self._run_batched_receiver)
+            timer.name = "KadabraBatchedReceiverRunner"
+            self.timer = timer
+            timer.start()
 
 class Nanny(object):
     """Monitors metrics that have been in-progress for a long time and attemps
@@ -319,16 +411,9 @@ class Nanny(object):
                 self.logger.debug("No metrics found in progress.")
 
             for metrics in in_progress:
-                should_republish = False
                 if metrics.serialized_at is not None:
-                    now = get_now()
-                    serialized_at = get_datetime_from_timestamp_string(
-                            metrics.serialized_at, metrics.timestamp_format)
-                    delta = timedelta_total_seconds(now - serialized_at)
-                    self.logger.debug(\
-                            "serialized_at: %s, now: %s, delta: %s" %\
-                        (str(metrics.serialized_at), str(now), delta))
-                    should_republish = delta > self.threshold_seconds
+                    should_republish = _should_republish(metrics,
+                            self.threshold_seconds, self.logger)
                 else:
                     self.logger.warn("Metrics is missing serialized_at, "
                             "something is wrong with the channel. "
@@ -392,8 +477,8 @@ class NannyThread(threading.Thread):
             if metrics is not None:
                 self.logger.debug("Publishing metrics: %s" %\
                         metrics.serialize())
-                self.publisher.publish(metrics)
-                self.channel.complete(metrics)
+                self.publisher.publish([metrics])
+                self.channel.complete([metrics])
         except Empty:
             pass
         except:
@@ -408,3 +493,110 @@ class NannyThread(threading.Thread):
         :returns: True if the thread has been stopped, False otherwise.
         """
         return self.stopped
+
+class BatchedNanny(object):
+    """Just like the regular :class:`~kadabra.agent.Nanny`, but
+    deals with batches of metrics, attempting to publish them directly as a
+    single batch. Used with the ~:class:`BatchedReceiver`.
+
+    :type channel: :ref:`api-channels`
+    :param channel: The channel to monitor.
+
+    :type publisher: :ref:`api-publishers`
+    :param publisher: The publisher to use for republishing metrics.
+
+    :type logger: ~logging.Logger
+    :param logger: The logger to use.
+
+    :type frequency_seconds: integer
+    :param frequency_seconds: How often the Nanny should query the in_progress
+                              queue.
+
+    :type threshold_seconds: integer
+    :param threshold_seconds: The threshold seconds to determine if metrics
+                              should be attempted to be republished.
+
+    :type max_batch_size: integer
+    :param max_batch_size: The maximum size of the batch to receive from the
+                           channel and attempt to republish.
+    """
+    def __init__(self, channel, publisher, logger, frequency_seconds,
+            threshold_seconds, max_batch_size):
+        self.channel = channel
+        self.publisher = publisher
+        self.logger = logger
+        self.frequency_seconds = frequency_seconds
+        self.threshold_seconds = threshold_seconds
+        self.max_batch_size = max_batch_size
+
+        self.timer = None
+
+    def start(self):
+        """Start the batched nanny."""
+        timer = Timer(self.frequency_seconds, self._run_nanny)
+        timer.name = "KadabraBatchedNanny"
+        self.timer = timer
+        timer.start()
+
+    def stop(self):
+        """Stop the batched nanny."""
+        self.logger.info("Stopping batched nanny...")
+        if self.timer is not None:
+            self.timer.cancel()
+
+    def _run_nanny(self):
+        """Runs the nanny. It will check the channel's in-progress queue at the
+        configured frequency, and attempt to republish the in-progress metrics
+        as a batch."""
+        try:
+            self.logger.debug("Running batched nanny")
+            in_progress = self.channel.in_progress(self.max_batch_size)
+
+            if len(in_progress) == 0:
+                self.logger.debug("No metrics found in progress.")
+
+            batch = [m for m in in_progress if _should_republish(m,
+                self.threshold_seconds, self.logger)]
+
+            self.publisher.publish(batch)
+            self.channel.complete(batch)
+        except:
+            self.logger.warn("Batched nanny encountered exception", exc_info=1)
+        finally:
+            timer = Timer(self.frequency_seconds, self._run_nanny)
+            timer.name = "KadabraBatchedNanny"
+            self.timer = timer
+            timer.start()
+
+def _should_republish(metrics, threshold_seconds, logger):
+    """Helper to determine if metrics should be republished by the nanny.
+
+    :type metrics: ~kadabra.Metrics
+    :param metrics: The metrics to check.
+
+    :type threshold_seconds: int
+    :param threshold_seconds: The number of seconds from when the metrics were
+                              serliazed to now for them to be attempted to be
+                              republished.
+
+    :type logger: ~logging.Logger
+    :param logger: The logger to use.
+
+    :rtype: bool
+    :returns: True if the metrics should be republished, False otherwise.
+    """
+    if metrics.serialized_at is not None:
+        now = get_now()
+        serialized_at = get_datetime_from_timestamp_string(
+                metrics.serialized_at, metrics.timestamp_format)
+        delta = timedelta_total_seconds(now - serialized_at)
+        logger.debug(
+                "serialized_at: %s, now: %s, delta: %s" %\
+            (str(metrics.serialized_at), str(now), delta))
+        return delta > threshold_seconds
+    else:
+        logger.warn("Metrics is missing serialized_at, "
+                "something is wrong with the channel. "
+                "Attempting to republish anyway")
+        return True
+

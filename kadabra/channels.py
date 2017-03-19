@@ -73,22 +73,44 @@ class RedisChannel(object):
         self.logger.debug("No metrics received")
         return None
 
-    def complete(self, metrics):
-        """Mark metrics as completed by removing them from the in-progress
-        queue.
+    def receive_batch(self, max_batch_size):
+        """Receive a list of metrics from the queue so they can be published.
+        Once received, all metrics will be moved into a temporary "in progress"
+        queue until they have been acknowledged as published (by calling
+        :meth:`~kadabra.channels.RedisChannel.complete`). The number of metrics
+        that are received is less than or equal to the ``max_batch_size``, and
+        possibly empty.
 
-        :type metrics: ~kadabra.Metrics
-        :param metrics: The metris to mark as complete.
+        :type max_batch_size: int
+        :param max_batch_size: The maximum number of metrics to receive in the
+                               batch.
+
+        :rtype: list
+        :returns: The list of metrics to be published. The size of the list is
+                  less than or equal to the ``max_batch_size``, and possibly
+                  empty if there are no metrics in the queue.
         """
-        to_complete = metrics.serialize()
-        self.logger.debug("Marking %s as complete" % str(to_complete))
-        rv = self.client.lrem(self.inprogress_key, 1, json.dumps(to_complete))
-        if rv > 0:
-            self.logger.debug("Successfully marked %s as complete" %\
-                    str(to_complete))
-        else:
-            self.logger.debug("Failed to mark %s as complete" %\
-                    str(to_complete))
+        self.logger.debug("Receiving batch of metrics")
+        pipeline = self.client.pipeline()
+        for i in range(max_batch_size):
+            pipeline.rpoplpush(self.queue_key, self.inprogress_key)
+        return [Metrics.deserialize(json.loads(m)) for m in pipeline.execute()
+                if m is not None]
+
+    def complete(self, metrics):
+        """Mark a list of metrics as completed by removing them from the
+        in-progress queue.
+
+        :type metrics: list
+        :param metrics: The list of :class:`~kadabra.Metrics` to mark as
+                        complete.
+        """
+        if len(metrics) > 0:
+            pipeline = self.client.pipeline()
+            for m in metrics:
+                pipeline.lrem(self.inprogress_key, 1,
+                        json.dumps(m.serialize()))
+            pipeline.execute()
 
     def in_progress(self, query_limit):
         """Return a list of the metrics that are in_progress.

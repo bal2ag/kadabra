@@ -14,7 +14,7 @@ def test_ctor(mock_get_logger):
     assert publisher.logger == logger
 
 @mock.patch('logging.getLogger')
-def test_ctor(mock_get_logger):
+def test_publish(mock_get_logger):
     serialized = "test"
     logger_name = "loggerName"
     mocked_logger = mock_get_logger.return_value
@@ -23,7 +23,7 @@ def test_ctor(mock_get_logger):
     mocked_metrics.serialize = MagicMock(return_value=serialized)
 
     publisher = kadabra.publishers.DebugPublisher(logger_name)
-    publisher.publish(mocked_metrics)
+    publisher.publish([mocked_metrics])
 
     mocked_metrics.serialize.assert_called_with()
-    mocked_logger.info.assert_called_with(serialized)
+    mocked_logger.info.assert_called_with([serialized])
