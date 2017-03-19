@@ -26,7 +26,8 @@ class DebugPublisher(object):
         :type metrics: list
         :param metrics: The list of ~kadabra.Metrics to publish.
         """
-        self.logger.info([m.serialize() for m in metrics])
+        if len(metrics) > 0:
+            self.logger.info([m.serialize() for m in metrics])
 
 class InfluxDBPublisher(object):
     """Publish metrics by persisting them into an InfluxDB database. Series
