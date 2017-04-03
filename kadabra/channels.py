@@ -29,15 +29,19 @@ class RedisChannel(object):
             "db": 0,
             "logger": "kadabra.channel",
             "queue_key": "kadabra_queue",
-            "inprogress_key": "kadabra_inprogress"
+            "inprogress_key": "kadabra_inprogress",
+            "key_ttl": None
     }
 
-    def __init__(self, host, port, db, logger, queue_key, inprogress_key):
+    def __init__(self, host, port, db, logger, queue_key, inprogress_key,
+                 key_ttl):
         from redis import StrictRedis
         self.client = StrictRedis(host=host, port=port, db=db)
         self.logger = logging.getLogger(logger)
         self.queue_key = queue_key
         self.inprogress_key = inprogress_key
+        self.key_ttl = key_ttl
+
 
     def send(self, metrics):
         """Send metrics to a Redis list, which will act as queue for pending
@@ -49,6 +53,8 @@ class RedisChannel(object):
         to_push = metrics.serialize()
         self.logger.debug("Sending %s" % to_push)
         self.client.lpush(self.queue_key, json.dumps(to_push))
+        if self.key_ttl is not None:
+            self.client.expire(self.queue_key, self.key_ttl)
         self.logger.debug("Successfully sent %s" % to_push)
 
     def receive(self):
@@ -105,4 +111,3 @@ class RedisChannel(object):
         self.logger.debug("Found %s in progress metrics" % len(in_progress))
         return [Metrics.deserialize(json.loads(m))\
                 for m in in_progress]
-

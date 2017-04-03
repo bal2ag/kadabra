@@ -10,10 +10,11 @@ db = 0
 logger = "testlogger"
 queue_key = 'queue_key'
 inprogress_key = 'inprogress_key'
+ttl_key = None
 
 def get_unit():
     return kadabra.channels.RedisChannel(host, port, db, logger, queue_key,
-            inprogress_key)
+            inprogress_key, ttl_key)
 
 @mock.patch('redis.StrictRedis')
 def test_ctor(mock_redis):
@@ -41,6 +42,18 @@ def test_send():
 
     metrics.serialize.assert_called_with()
     channel.client.lpush.assert_called_with(queue_key, json.dumps(serialized))
+
+    global ttl_key
+    ttl_key = 84600
+    channel = get_unit()
+    channel.client.lpush = MagicMock()
+    channel.client.expire = MagicMock()
+    channel.send(metrics)
+    metrics.serialize.assert_called_with()
+    channel.client.lpush.assert_called_with(queue_key, json.dumps(serialized))
+    channel.client.expire.assert_called_with(queue_key, ttl_key)
+
+    ttl_key = None
 
 @mock.patch('kadabra.Metrics.deserialize')
 def test_receive_metrics(mock_deserialize):
