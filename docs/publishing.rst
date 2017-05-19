@@ -38,6 +38,22 @@ measurement if you publish metrics with the same timestamp, dimensions, names,
 metadata, and values. This means that you will not end up with duplicated
 metrics from the agent retrying to publish the same metrics multiple times.
 
+Batched Agent
+-------------
+
+The default agent configuration will publish metrics eagerly; that is, as soon
+as a :class:`~kadabra.Metrics` object is available to publish on the channel, a
+receiver thread will pick it up and attempt to publish it.
+
+For some backends this may not be desirable. For example, if you publish to a
+service with API limits or per-API-call pricing, you'll want to send your
+metrics in periodic batches with a single API call.
+
+To support these use cases, you can set the `agent_type` configuration value to
+`batched`, which will cause the Agent to publish all available metrics (up to a
+configurable limit) at once. There are different configuration values available
+for the batched Agent; for more information see :doc:`configuration`.
+
 DebugPublisher
 --------------
 

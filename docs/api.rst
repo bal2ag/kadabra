@@ -39,11 +39,17 @@ Agent
 .. autoclass:: kadabra.agent.ReceiverThread
    :members:
 
+.. autoclass:: kadabra.agent.BatchedReceiver
+   :members:
+
 .. autoclass:: kadabra.agent.Nanny
    :members:
    :inherited-members:
 
 .. autoclass:: kadabra.agent.NannyThread
+   :members:
+
+.. autoclass:: kadabra.agent.BatchedNanny
    :members:
 
 .. _api-metrics:

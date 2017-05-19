@@ -67,6 +67,9 @@ Agent
 `AGENT_LOGGER_NAME`              The name of the logger that the agent will use
                                  to log messages. **Default:**
                                  ``kadabra.agent``
+`AGENT_TYPE`                     The type of the agent. Valid values are
+                                 ``default`` and ``batched``. **Default:**
+                                 ``default``
 `AGENT_CHANNEL_TYPE`             The type of the channel to use for receiving
                                  metrics. Currently the only accepted value is
                                  'redis'. **Default:** ``redis``
@@ -89,6 +92,15 @@ Agent
 `AGENT_RECEIVER_THREADS`         The number of threads the agent will use for
                                  publishing metrics from the channel.
                                  **Default:** `3`
+`BATCHED_AGENT_INTERVAL_SECONDS` How often the batched agent will get metrics
+                                 from the channel for publishing. **Default:**
+                                 60
+`BATCHED_AGENT_MAX_BATCH_SIZE`   The maximum number of Metrics objects to
+                                 receive from the channel for publishing. Note
+                                 that each metrics object can result in
+                                 multiple "metrics" being published to the
+                                 backend (for example, if there are multiple
+                                 counters and timers). **Default:** 10000
 `AGENT_NANNY_FREQUENCY_SECONDS`  How often the agent will check for metrics
                                  that have been in-progress for a long time so
                                  that they can be republished. **Default:**
