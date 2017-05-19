@@ -3,6 +3,16 @@ Kadabra Changelog
 
 Here you can see the full list of changes between each Kadabra release.
 
+Version 0.5.0
+-------------
+- Implemented BatchedReceiver
+- Publishers now take a list of Metrics to publish instead of a single Metrics
+  object
+- DefaultPublisher only emits output if the number of metrics to publish is
+  greater than 0
+- Channel's complete method takes a list of Metrics objects to mark as complete
+- Minor fixes to docs
+
 Version 0.4.0
 -------------
 - Renamed "Client" to "Kadabra"
