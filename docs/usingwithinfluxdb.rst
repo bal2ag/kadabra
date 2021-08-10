@@ -6,7 +6,7 @@ Using with InfluxDB
 `InfluxDB <https://www.influxdata.com/time-series-platform/influxdb/>`_ is a
 great open-source time-series database that works very well for storing
 metrics. It is scalable, simple to use, and has an active developer
-community. Plus, open-source dashboarding software such as `Graphana
+community. Plus, open-source dashboarding software such as `Grafana
 <http://grafana.org/>`_ includes plugins for InfluxDB, making it very easy to
 create dashboards from your Kadabra metrics.
 
